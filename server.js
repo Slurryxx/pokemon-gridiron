@@ -393,6 +393,18 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/best-lineup'&&req.method==='GET')return json(res,403,{error:'Optimal lineup hints are disabled for competitive play.'});
  if(url.pathname==='/api/lineup-score'&&req.method==='POST')return json(res,403,{error:'Scouting grades are hidden during competitive play.'});
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
+ if(url.pathname==='/api/shared-team'&&req.method==='GET'){
+  if(!pool)return json(res,503,{error:'Team sharing is temporarily unavailable.'});
+  const username=String(url.searchParams.get('username')||'').trim().toLowerCase();
+  if(!/^[a-z0-9_]{3,24}$/.test(username))return json(res,400,{error:'Invalid trainer username.'});
+  await accountsDB();
+  const r=await pool.query('SELECT u.username,t.name,t.lineup,t.updated_at FROM gridiron_users u JOIN gridiron_teams t ON t.user_id=u.id WHERE u.username=$1',[username]);
+  if(!r.rows.length)return json(res,404,{error:'This trainer has not published a Dream Team yet.'});
+  const team=r.rows[0];
+  if(db.length!==151)return json(res,503,{error:'Pokémon catalog is still loading.'});
+  const players=POSITIONS.map(position=>{const id=Number(team.lineup?.[position]),p=db[id-1];return {position,id,name:p?.name||'Unknown Pokémon',salary:pokemonSalary(id)||0}});
+  return json(res,200,{username:team.username,name:team.name,updatedAt:team.updated_at,players,salaryCap:SALARY_CAP,totalSalary:players.reduce((n,p)=>n+p.salary,0),valid:validLineup(team.lineup)});
+ }
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,stats:p.stats,salary:pokemonSalary(p.id)}))});
  const b=req.method==='POST'?await body(req):{};
  if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season','/api/friends','/api/story'].includes(url.pathname))return accountAPI(req,res,url,b);
