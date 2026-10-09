@@ -21,7 +21,7 @@ for(let i=0;i<15;i++){
  assert.ok(r.events.every(e=>!e.actors?.carrier||(e.actors.carrier>=1&&e.actors.carrier<=151)));
  assert.equal(r.winner,r.scores[0]>r.scores[1]?0:1);
 }
-const html=fs.readFileSync('index.html','utf8'),client=fs.readFileSync('draft.js','utf8');
+const html=fs.readFileSync('draft.html','utf8'),client=fs.readFileSync('draft.js','utf8');
 for(const id of ['field','field-qb','field-carrier','field-defense','sprite-qb','sprite-carrier','sprite-defense','scrimmage','field-ball','field-flash','fieldpossession','fieldyard'])assert.ok(html.includes('id="'+id+'"'),id+' element');
 assert.ok(client.includes('function fieldUpdate(e)'));
 console.log('PASS: 15 simulated games, event positions, actor IDs, scoreboard, replay DOM hooks');
