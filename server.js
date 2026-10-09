@@ -331,7 +331,7 @@ async function api(req,res,url){try{
  }
  if(url.pathname==='/api/scouting'&&req.method==='GET')return json(res,403,{error:'Scouting grades are hidden for competitive play.'});
  if(url.pathname==='/api/best-lineup'&&req.method==='GET')return json(res,403,{error:'Optimal lineup hints are disabled for competitive play.'});
- if(url.pathname==='/api/lineup-score'&&req.method==='POST'){const request=await body(req);return json(res,200,gradeLineup(request.lineup))}
+ if(url.pathname==='/api/lineup-score'&&req.method==='POST')return json(res,403,{error:'Scouting grades are hidden during competitive play.'});
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg}))});
  const b=req.method==='POST'?await body(req):{};
