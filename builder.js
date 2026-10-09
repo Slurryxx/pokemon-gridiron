@@ -50,6 +50,9 @@ async function init(){
 }
 $('pokemonSearch').oninput=renderChoices;$('sortMode').onchange=renderChoices;
 $('autoBest').onclick=()=>{if(!best){message('Best team is still loading');return}lineup={...best.lineup};persist();render();score()};
+async function accountRequest(url,method,data){const r=await fetch(url,{method:method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
+$('saveDreamTeam').onclick=async()=>{try{if(POS.some(p=>!lineup[p])||new Set(Object.values(lineup)).size!==22)throw Error('Fill all 22 positions with unique Pokémon first.');const name=$('teamName').value.trim()||'My Dream Team';const d=await accountRequest('/api/my-team','POST',{name,lineup});message('✓ '+d.name+' saved to your account! Challenge other teams in Dream Team Battles.')}catch(e){if(/Log in/i.test(e.message)){message('Log in first to save your team.');location.href='/account.html?next='+encodeURIComponent('/builder.html')}else message(e.message)}};
+$('loadDreamTeam').onclick=async()=>{try{const d=await accountRequest('/api/my-team');if(!d.team)throw Error('No saved team yet. Save one first.');lineup=d.team.lineup;$('teamName').value=d.team.name;persist();render();score();message('Loaded '+d.team.name+' from your account.')}catch(e){message(e.message)}};
 $('clearTeam').onclick=()=>{lineup={};selected='QB';persist();render();score();message('Lineup cleared')};
 $('shareTeam').onclick=async()=>{persist();try{await navigator.clipboard.writeText(location.href);message('Shareable lineup link copied!')}catch{message('Copy this URL to share: '+location.href)}};
 $('challengeFriends').onclick=async()=>{
