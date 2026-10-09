@@ -2,3 +2,5 @@
 .leaderboard-panel{margin-top:22px}.leaderboard-entries{margin:14px 0;max-height:460px;overflow:auto}.leaderboard-row{display:grid;grid-template-columns:44px 1fr 120px 90px;gap:12px;align-items:center;padding:12px 10px;border-bottom:1px solid #dce6d7}.leaderboard-row strong{font-size:15px}.leaderboard-row small{color:#5c7862}@media(max-width:540px){.leaderboard-row{grid-template-columns:32px 1fr 65px;gap:5px}.leaderboard-row small{display:none}}
 
 .submit-feedback{margin:12px 0;padding:13px 16px;border-radius:10px;border:1px solid #9db6a2;background:#e6eee5;color:#264432;font-size:13px;font-weight:750}.submit-feedback[data-kind='error']{background:#ffe8e5;border-color:#e6a6a1;color:#9b2823}.submit-feedback[data-kind='success']{background:#d9f6cf;border-color:#86c879;color:#24562d}#submitTeam:disabled{opacity:.65;cursor:wait}
+
+.team-name-field{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:800;letter-spacing:1px}.team-name-field input{min-height:44px;padding:9px 12px;border-radius:8px;border:1px solid #8ba88e}.builder-actions #statusText{font-size:18px}.builder-actions a{align-self:center;color:#d5f59b;font-weight:800}
