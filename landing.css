@@ -3,3 +3,13 @@
 .global-link{margin:30px auto 0}.global-link a{display:inline-flex;gap:18px;align-items:center;justify-content:center;padding:17px 30px;border:2px solid #d6fa79;border-radius:12px;color:#d6fa79;text-decoration:none;font-weight:900;letter-spacing:2px;font-size:14px;background:#d6fa790c;transition:background .2s}.global-link a:hover{background:#d6fa7922}.global-link span{font-size:22px}
 
 .home-nav{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:0 0 36px}.home-nav a{color:#e9f6df;text-decoration:none;border:1px solid #50766c;background:#19343b;padding:13px 17px;border-radius:12px;font-weight:800;font-size:13px}.home-nav a:hover,.home-tiles a:hover{border-color:#cbf26b;background:#2c5147}.home-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 35px;text-align:left}.home-tiles a{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:white;background:#19323a;border:1px solid #4b6767;border-radius:14px;padding:20px 16px;min-height:150px}.home-tiles span{font-size:30px}.home-tiles strong{font-size:15px}.home-tiles small{color:#b6cdcb;line-height:1.5}.landing h2{margin-top:36px}@media(max-width:750px){.home-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}.home-nav a{flex:1 1 42%;font-size:12px;padding:12px 7px}}@media(max-width:450px){.home-tiles a{padding:15px 10px;min-height:140px}.home-tiles strong{font-size:13px}}
+
+/* Persistent account controls on the home screen */
+.account-nav{position:relative;z-index:5;display:flex;align-items:center;justify-content:flex-end;gap:12px;max-width:1160px;margin:0 auto;padding:18px 24px 0}
+.account-pill,.account-nav>a:not(.account-pill),.account-nav button{display:inline-flex;align-items:center;gap:9px;border:1px solid #65847b;border-radius:999px;background:#19343b;color:#f3ffe6;text-decoration:none;padding:11px 16px;font:700 13px Inter,system-ui,sans-serif;cursor:pointer}
+.account-pill.signed-in{border-color:#c6f37d;color:#d6fa79;background:#254335}
+.account-avatar{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#ffffff18}
+.account-nav button{background:transparent;color:#c8d3d1}
+.account-nav [hidden]{display:none!important}
+.account-nav a:hover,.account-nav button:hover{border-color:#d6fa79}
+@media(max-width:650px){.account-nav{padding:12px 14px 0;gap:7px;flex-wrap:wrap}.account-pill,.account-nav>a:not(.account-pill),.account-nav button{font-size:11px;padding:9px 11px}.landing{padding-top:20px}}
