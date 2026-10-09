@@ -129,3 +129,21 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
 @media(max-width:1080px){.builder-layout{grid-template-columns:1fr}.position-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:700px){.position-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.position-select{min-height:134px;padding:8px 3px}.position-pokemon{height:63px;width:70px}.position-select strong{font-size:11px}.position-clear{width:26px;height:26px}}
 @media(max-width:380px){.position-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Picker layout repair: isolate the market from legacy field styles. */
+.builder-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+.builder-layout>.panel{min-width:0;width:100%;overflow:visible}
+.picker-panel{min-width:0;max-width:100%}
+.picker-panel .picker-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.picker-panel .picker-controls input{flex:1 1 190px;min-width:0;width:auto}
+.picker-panel .picker-controls select{flex:1 1 145px;min-width:0;max-width:100%}
+.picker-panel .recommended-choices{grid-template-columns:repeat(3,minmax(0,1fr))}
+.picker-panel .recommendation-card{min-width:0;min-height:112px;flex-direction:column;text-align:center;justify-content:center;gap:4px}
+.picker-panel .recommendation-card img{width:65px;height:65px}
+.picker-panel .recommendation-card span{align-items:center}
+.picker-panel .pokemon-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-height:620px;overflow-y:auto;overflow-x:hidden;gap:10px}
+.picker-panel .pokemon-choice{min-width:0;max-width:100%;overflow:hidden}
+.picker-panel .pokemon-choice strong{max-width:100%;overflow-wrap:anywhere}
+.position-card.active.filled{background:#eaf8dc}
+@media(max-width:1080px){.builder-layout{grid-template-columns:minmax(0,1fr)}.picker-panel .recommendation-card{flex-direction:row;text-align:left;justify-content:flex-start}.picker-panel .recommendation-card span{align-items:flex-start}}
+@media(max-width:600px){.picker-panel .recommended-choices{grid-template-columns:1fr}.picker-panel .pokemon-choices{grid-template-columns:repeat(2,minmax(0,1fr));max-height:560px}.picker-panel .recommendation-card{min-height:78px}.picker-panel .recommendation-card img{width:60px;height:60px}.picker-panel .picker-controls{flex-direction:column}.picker-panel .picker-controls input,.picker-panel .picker-controls select{width:100%;flex:auto}}
