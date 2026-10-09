@@ -353,16 +353,16 @@ function simulate(players){
   return preferred.find(m=>pool.includes(m))||pick(pool)||null;
  };
  const moveLabel=m=>m?m.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' '):'a burst of speed';
- const burst=(passing,duel)=>rand()<clamp((passing?.25:.19)+Math.max(-.06,Math.min(.14,duel*.002)),.13,.43);
+ const burst=(passing,duel)=>rand()<clamp((passing?.09:.07)+Math.max(-.03,Math.min(.05,duel*.001)),.04,.17);
  let fieldSpot=25,fieldTeam=0;
  const emit=(quarter,kind,text,team,actors={})=>events.push({quarter,kind,text,team,scores:[...scores],spot:clamp(fieldSpot,0,100),possession:fieldTeam,actors});
  for(let q=1;q<=4;q++){
   emit(q,'quarter','QUARTER '+q+' — Kickoff!',null);
-  for(let drive=0;drive<6;drive++){
+  for(let drive=0;drive<3;drive++){
    const t=(q+drive)%2,opp=1-t;
    let spot=25,down=1,need=10;fieldSpot=spot;fieldTeam=t;
    emit(q,'drive',names[t]+' takes possession at its own 25.',t);
-   for(let play=0;play<16;play++){
+   for(let play=0;play<13;play++){
     const passing=rand()<.58,receiver=pick(groups.WR),blocker=pick(groups.OL);
     const defender=passing?pick(groups.CB):pick([...groups.LB,...groups.DL]);
     const ballPos=passing?receiver:'RB',ballId=id(t,ballPos),defId=id(opp,defender);
@@ -372,19 +372,19 @@ function simulate(players){
     if(passing){
      const pressure=clamp(.065+(skill(opp,pick(groups.DL))-group(t,groups.OL))*.0025,.025,.19);
      if(rand()<pressure){const loss=crypto.randomInt(2,10);spot-=loss;fieldSpot=spot;yards[t]-=loss;actors.gain=-loss;down++;need+=loss;emit(q,'sack',mon(opp,defender)+' brings down '+mon(t,'QB')+' for a '+loss+'-yard loss!',opp,actors)}
-     else if(rand()>clamp(.83+duel*.004,.60,.96)){
+     else if(rand()>clamp(.69+duel*.003,.49,.84)){
       const intercepted=rand()<clamp(.045-duel*.0005,.015,.12);
       if(intercepted){turnovers[t]++;emit(q,'turnover','INTERCEPTION! '+mon(opp,defender)+' picks off '+mon(t,'QB')+'!',opp,actors);break}
       down++;emit(q,'incomplete',mon(t,'QB')+' targets '+mon(t,receiver)+', but '+mon(opp,defender)+' breaks up the pass!',opp,actors)
      }else{
-      const explosive=burst(true,duel);const gain=clamp(Math.round((explosive?35:15)+duel*.22+(rand()-.5)*(explosive?70:27)),0,95);
+      const explosive=burst(true,duel);const gain=clamp(Math.round((explosive?21:7)+duel*.14+(rand()-.5)*(explosive?38:16)),0,95);
       spot+=gain;fieldSpot=spot;yards[t]+=gain;actors.gain=gain;
       if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,receiver)+' unleashes '+actors.move+' to finish a '+gain+'-yard strike from '+mon(t,'QB')+'!',t,actors);break}
       const first=gain>=need;if(first){down=1;need=10}else{down++;need=Math.max(1,need-gain)}
       emit(q,gain>=20?'bigplay':'play',gain>=20?'EXPLOSIVE! '+mon(t,receiver)+' uses '+actors.move+' to torch '+mon(opp,defender)+' on a '+gain+'-yard catch!':mon(t,'QB')+' finds '+mon(t,receiver)+' for '+gain+' yards against '+mon(opp,defender)+'.'+(first?' FIRST DOWN!':''),t,actors)
      }
     }else{
-     const explosive=burst(false,duel);const gain=clamp(Math.round((explosive?29:8)+duel*.19+(rand()-.5)*(explosive?75:18)),-5,95);
+     const explosive=burst(false,duel);const gain=clamp(Math.round((explosive?19:4)+duel*.12+(rand()-.5)*(explosive?32:12)),-5,95);
      spot+=gain;fieldSpot=spot;yards[t]+=gain;actors.gain=gain;
      if(rand()<clamp(.012-duel*.0001,.004,.04)){turnovers[t]++;emit(q,'turnover','FUMBLE! '+mon(t,'RB')+' loses the ball after contact from '+mon(opp,defender)+'!',opp,actors);break}
      if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,'RB')+' uses '+actors.move+' to explode past '+mon(opp,defender)+' for a '+gain+'-yard rushing score!',t,actors);break}
@@ -392,7 +392,7 @@ function simulate(players){
      emit(q,gain>=18?'bigplay':'play',gain>=18?'BREAKAWAY! '+mon(t,'RB')+' fires off '+actors.move+' and blasts past '+mon(opp,defender)+' for '+gain+' yards!':mon(t,'RB')+' runs behind '+mon(t,blocker)+' for '+gain+' yards.'+(first?' FIRST DOWN!':''),t,actors)
     }
     if(spot<=0){scores[opp]+=2;emit(q,'safety','SAFETY! '+names[opp]+' forces the ball into the end zone!',opp,actors);break}
-    if(down>4){if(spot>=68&&rand()<.68){scores[t]+=3;emit(q,'fieldgoal','FIELD GOAL! '+names[t]+' adds three points.',t)}else emit(q,'punt',names[t]+' punts on fourth down.',t);break}
+    if(down>4){if(spot>=65&&rand()<.64){scores[t]+=3;emit(q,'fieldgoal','FIELD GOAL! '+names[t]+' adds three points.',t)}else emit(q,'punt',names[t]+' punts on fourth down.',t);break}
    }
   }
   emit(q,'endquarter','END OF QUARTER '+q+' — '+scores[0]+' : '+scores[1],null);
