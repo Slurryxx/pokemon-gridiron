@@ -34,15 +34,14 @@ function renderChoices(){
 }
 function renderBreakdown(){ $('breakdown').replaceChildren(...POS.map(pos=>{const row=document.createElement('div');row.className='breakdown-row';row.textContent=pos+' · '+(lineup[pos]?name(lineup[pos])+' · $'+salary(lineup[pos]):'Open');return row})) }
 function render(){renderField();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
-function persist(){try{sessionStorage.setItem('gridiron_draft_lineup',JSON.stringify({lineup,name:$('teamName').value}));}catch{}}
+function persist(){try{if(activeUsername)sessionStorage.setItem('gridiron_draft_lineup_'+activeUsername,JSON.stringify({lineup,name:$('teamName').value}));}catch{}}
 function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
 async function init(){
  try{
   const response=await fetch('/api/catalog');if(!response.ok)throw Error('Could not load Pokémon');
   const data=await response.json();if(!data.ready)throw Error('Pokémon database is still loading. Please retry.');catalog=data.pokemon;salaryCap=data.salaryCap;
   // Preserve unsaved edits across temporary errors without embedding rosters in URLs.
-  let draft=null;try{draft=JSON.parse(sessionStorage.getItem('gridiron_draft_lineup')||'null')}catch{}
-  try{const me=await accountRequest('/api/my-team');if(me.team){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();lineup={};for(const pos of POS){const id=Number(me.team.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}}$('teamName').value=me.team.name;message(seen.size===22?(spent()>salaryCap?'Your saved team is over the salary cap. Replace expensive Pokémon to save.':'Editing '+me.team.name+' — change any position, then save your changes.'):'Your saved team has missing or duplicate Pokémon. Fill the empty positions and save.')}else message('Build your first Dream Team: choose 22 Pokémon, then save.');if(draft?.lineup&&typeof draft.lineup==='object'){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();for(const pos of POS){const id=Number(draft.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}else delete lineup[pos]}if(draft.name)$('teamName').value=draft.name;message('Restored your unsaved edits. Review the lineup and press Save My Team.')}}catch(e){if(/Log in/i.test(e.message)){location.replace('/account.html?next=/builder.html');return}message(e.message)}
+  try{const me=await accountRequest('/api/my-team');activeUsername=me.user?.username||'';let draft=null;try{if(activeUsername)draft=JSON.parse(sessionStorage.getItem('gridiron_draft_lineup_'+activeUsername)||'null')}catch{}if(me.team){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();lineup={};for(const pos of POS){const id=Number(me.team.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}}$('teamName').value=me.team.name;message(seen.size===22?(spent()>salaryCap?'Your saved team is over the salary cap. Replace expensive Pokémon to save.':'Editing '+me.team.name+' — change any position, then save your changes.'):'Your saved team has missing or duplicate Pokémon. Fill the empty positions and save.')}else message('Build your first Dream Team: choose 22 Pokémon, then save.');if(draft?.lineup&&typeof draft.lineup==='object'){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();for(const pos of POS){const id=Number(draft.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}else delete lineup[pos]}if(draft.name)$('teamName').value=draft.name;message('Restored your unsaved edits. Review the lineup and press Save My Team.')}}catch(e){if(/Log in/i.test(e.message)){location.replace('/account.html?next=/builder.html');return}message(e.message)}
   render();score();
  }catch(e){message('Unable to load: '+e.message)}
 }
@@ -60,7 +59,7 @@ $('saveDreamTeam').onclick=async()=>{
   saving=true;budget();$('saveDreamTeam').textContent='Saving…';message('Saving your Dream Team…');
   const teamName=$('teamName').value.trim()||'My Dream Team';
   await accountRequest('/api/my-team','POST',{name:teamName,lineup});
-  try{sessionStorage.removeItem('gridiron_draft_lineup')}catch{}
+  try{sessionStorage.removeItem('gridiron_draft_lineup_'+activeUsername)}catch{}
   message('✓ Team saved successfully! Opening your roster…');location.assign('/my-team.html');
  }catch(e){message('Could not save: '+e.message);if(/Log in|unauthorized|session/i.test(e.message)){message('Your session expired. Re-enter your username, then return to the builder to save your edits.');}}
  finally{saving=false;$('saveDreamTeam').textContent='💾 Save My Team';budget()}
