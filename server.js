@@ -31,6 +31,8 @@ async function leaderboardDB(){
 }
 
 
+const BANNED_POKEMON=new Set([144,145,146,150,151]);
+const allowedPokemon=id=>Number.isInteger(id)&&id>=1&&id<=151&&!BANNED_POKEMON.has(id);
 const AUTH_COOKIE='gridiron_session';
 const hashPassword=(password,salt)=>crypto.scryptSync(password,salt,64).toString('hex');
 const authCookie=(token,maxAge)=>AUTH_COOKIE+'='+token+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age='+maxAge;
@@ -72,7 +74,7 @@ async function leagueRows(){
  ORDER BY wins DESC, losses ASC, played DESC, u.username ASC LIMIT 200`);
  return q.rows.map((r,i)=>({...r,rank:i+1,points:r.wins*3}));
 }
-const validLineup=lineup=>lineup&&typeof lineup==='object'&&POSITIONS.every(p=>Number.isInteger(lineup[p])&&lineup[p]>=1&&lineup[p]<=151)&&new Set(POSITIONS.map(p=>lineup[p])).size===22;
+const validLineup=lineup=>lineup&&typeof lineup==='object'&&POSITIONS.every(p=>allowedPokemon(lineup[p]))&&new Set(POSITIONS.map(p=>lineup[p])).size===22;
 async function loggedIn(req){
  const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(AUTH_COOKIE+'='));
  if(!raw)return null;
@@ -306,7 +308,7 @@ async function api(req,res,url){try{
 
  const category=pos=>pos==='QB'?'QB':pos==='RB'?'RB':pos.startsWith('WR')?'WR':pos==='TE'?'TE':['LT','LG','C','RG','RT'].includes(pos)?'OL':pos.startsWith('DE')?'EDGE':pos.startsWith('DT')?'IDL':pos.startsWith('LB')?'EDGE':pos.startsWith('CB')?'CB':'S';
  const fitScore=(id,pos)=>{const sc=scouting(id);if(!sc)return 0;const target=category(pos);const fit=sc.position===target?1:((sc.position==='CB'&&target==='S')||(sc.position==='S'&&target==='CB'))?.85:((sc.position==='EDGE'&&pos.startsWith('LB'))?.75:.65);return Math.round(sc.grade*fit)};
- const gradeLineup=lineup=>{if(!lineup||typeof lineup!=='object')throw Error('Lineup required');const ids=POSITIONS.map(p=>Number(lineup[p]));if(ids.some(id=>!Number.isInteger(id)||id<1||id>151)||new Set(ids).size!==22)throw Error('Select 22 different Pokémon');const slots=POSITIONS.map((position,i)=>({position,id:ids[i],score:fitScore(ids[i],position),scouting:scouting(ids[i])}));const total=slots.reduce((n,x)=>n+x.score,0),overall=Math.round(total/22);return {overall,total,offense:Math.round(slots.slice(0,11).reduce((n,x)=>n+x.score,0)/11),defense:Math.round(slots.slice(11).reduce((n,x)=>n+x.score,0)/11),slots,unscouted:slots.filter(x=>!x.scouting).map(x=>x.id),method:'CSV model grade multiplied by position-fit factor; not an actual win probability'}};
+ const gradeLineup=lineup=>{if(!lineup||typeof lineup!=='object')throw Error('Lineup required');const ids=POSITIONS.map(p=>Number(lineup[p]));if(ids.some(id=>!Number.isInteger(id)||!allowedPokemon(id))||new Set(ids).size!==22)throw Error('Select 22 different Pokémon');const slots=POSITIONS.map((position,i)=>({position,id:ids[i],score:fitScore(ids[i],position),scouting:scouting(ids[i])}));const total=slots.reduce((n,x)=>n+x.score,0),overall=Math.round(total/22);return {overall,total,offense:Math.round(slots.slice(0,11).reduce((n,x)=>n+x.score,0)/11),defense:Math.round(slots.slice(11).reduce((n,x)=>n+x.score,0)/11),slots,unscouted:slots.filter(x=>!x.scouting).map(x=>x.id),method:'CSV model grade multiplied by position-fit factor; not an actual win probability'}};
  // Maximum-weight assignment: one unique Pokémon per slot, including repeated position categories.
  function bestLineup(){const n=POSITIONS.length,m=150,u=Array(n+1).fill(0),v=Array(m+1).fill(0),p=Array(m+1).fill(0),way=Array(m+1).fill(0);for(let i=1;i<=n;i++){p[0]=i;let j0=0;const minv=Array(m+1).fill(Infinity),used=Array(m+1).fill(false);do{used[j0]=true;const i0=p[j0];let delta=Infinity,j1=0;for(let j=1;j<=m;j++)if(!used[j]){const cur=-fitScore(j,POSITIONS[i0-1])-u[i0]-v[j];if(cur<minv[j]){minv[j]=cur;way[j]=j0}if(minv[j]<delta){delta=minv[j];j1=j}}for(let j=0;j<=m;j++){if(used[j]){u[p[j]]+=delta;v[j]-=delta}else minv[j]-=delta}j0=j1}while(p[j0]!==0);do{const j1=way[j0];p[j0]=p[j1];j0=j1}while(j0!==0)}const result={};for(let j=1;j<=m;j++)if(p[j])result[POSITIONS[p[j]-1]]=j;return result}
  if(url.pathname==='/api/leaderboard'&&req.method==='GET'){
@@ -331,7 +333,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/best-lineup'&&req.method==='GET'){const lineup=bestLineup();return json(res,200,{lineup,...gradeLineup(lineup)})}
  if(url.pathname==='/api/lineup-score'&&req.method==='POST'){const request=await body(req);return json(res,200,gradeLineup(request.lineup))}
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
- if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,pokemon:db.map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg}))});
+ if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg}))});
  const b=req.method==='POST'?await body(req):{};
  if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
@@ -342,7 +344,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/pick'&&req.method==='POST'){
   if(db.length!==151)return json(res,503,{error:'Pokémon database still loading'});
   if(r.phase!=='draft'||turn(r.picks.length)!==i)return json(res,409,{error:'Not your turn'});
-  if(!Number.isInteger(b.id)||b.id<1||b.id>151||r.picks.some(p=>p.id===b.id))return json(res,409,{error:'Pokémon unavailable'});
+  if(!Number.isInteger(b.id)||!allowedPokemon(b.id)||r.picks.some(p=>p.id===b.id))return json(res,409,{error:'Pokémon unavailable'});
   const position=POSITIONS[r.picks.filter(p=>p.side===i).length];r.picks.push({side:i,id:b.id,position});if(r.picks.length===44)r.phase='lineups';return json(res,200,view(r,i))
  }
  if(url.pathname==='/api/ready'&&req.method==='POST'){
