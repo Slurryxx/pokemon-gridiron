@@ -35,7 +35,7 @@ async function leaderboardDB(){
 const allowedPokemon=id=>Number.isInteger(id)&&id>=1&&id<=151;
 const SALARY_CAP=250;
 // Public, deterministic prices based only on canonical Pokémon base stats, not position fit.
-const pokemonSalary=id=>{const p=db[id-1];if(!p?.stats)return null;const total=Object.values(p.stats).reduce((sum,v)=>sum+(Number(v)||0),0);return 3+Math.round(total/65)};
+const pokemonSalary=id=>{const p=db[id-1];if(!p?.stats)return null;const total=Object.values(p.stats).reduce((sum,v)=>sum+(Number(v)||0),0);const strength=Math.max(0,Math.min(1,(total-175)/505));return 3+Math.round(24*Math.pow(strength,1.55))};
 const lineupSalary=lineup=>POSITIONS.reduce((sum,pos)=>sum+(pokemonSalary(lineup[pos])||0),0);
 const AUTH_COOKIE='gridiron_session';
 const hashPassword=(password,salt)=>crypto.scryptSync(password,salt,64).toString('hex');
