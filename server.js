@@ -1,5 +1,6 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const scouting=require('./scouting.js');
+const {seasonAPI}=require('./season.js');
 const {Pool}=require('pg');
 const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false},max:4,connectionTimeoutMillis:10000}):null;
 function dbIssue(e){
@@ -132,6 +133,7 @@ async function accountAPI(req,res,url,b){
  if(url.pathname==='/api/league'&&req.method==='GET'){await competitionDB();return json(res,200,{standings:await leagueRows(),rules:'3 points per accepted-match win; accepted matches only'});}
  if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
  if(['/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))await competitionDB();
+ if(url.pathname==='/api/season'&&(req.method==='GET'||req.method==='POST')){const data=await seasonAPI({pool,user,method:req.method,body:b,simulate,validLineup,ready:db.length===151});return json(res,200,data)}
  if(url.pathname==='/api/profile'&&req.method==='GET'){
   const name=String(url.searchParams.get('username')||user.username).trim().toLowerCase();
   const p=await pool.query('SELECT u.id,u.username,t.name AS team_name,t.updated_at FROM gridiron_users u LEFT JOIN gridiron_teams t ON t.user_id=u.id WHERE u.username=$1',[name]);
@@ -337,7 +339,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,stats:p.stats,salary:pokemonSalary(p.id)}))});
  const b=req.method==='POST'?await body(req):{};
- if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))return accountAPI(req,res,url,b);
+ if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
  const r=room(b.code||url.searchParams.get('code'));
  if(url.pathname==='/api/join'&&req.method==='POST'){if(r.players[1]||r.phase!=='waiting')return json(res,409,{error:'Room full or already started'});const token=crypto.randomBytes(24).toString('hex');r.players[1]={token,ready:false};r.phase='draft';return json(res,200,{...view(r,1),token})}
