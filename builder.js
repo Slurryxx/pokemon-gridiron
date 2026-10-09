@@ -10,25 +10,23 @@ const salary=id=>catalog.find(p=>p.id===id)?.salary||0;
 const spent=()=>POS.reduce((n,pos)=>n+salary(lineup[pos]),0);
 function budget(){const used=spent(),left=salaryCap-used;const node=$('salaryBudget');node.textContent='$'+used+' / $'+salaryCap;node.classList.toggle('over-cap',left<0);$('budgetRemaining').textContent=left>=0?'$'+left+' remaining':'$'+Math.abs(left)+' over cap';$('budgetRemaining').classList.toggle('over-cap',left<0);$('budgetPercent').textContent=Math.round(used/salaryCap*100)+'% used';$('salaryProgress').setAttribute('aria-valuemax',String(salaryCap));$('salaryProgress').setAttribute('aria-valuenow',String(used));$('saveDreamTeam').disabled=saving;$('budgetBar').style.width=Math.min(100,used/salaryCap*100)+'%';$('budgetBar').classList.toggle('over-cap',left<0)}
 function renderField(){
- const root=$('builderField');root.replaceChildren();
- for(const [heading,positions] of [['OFFENSE',POS.slice(0,11)],['DEFENSE',POS.slice(11)]]){
-  const group=document.createElement('section');group.className='position-group';
-  const label=document.createElement('h3');label.textContent=heading+' · '+positions.filter(pos=>lineup[pos]).length+'/11';group.append(label);
-  const grid=document.createElement('div');grid.className='position-grid';
-  for(const pos of positions){
-   const id=lineup[pos],card=document.createElement('div');card.className='position-card'+(selected===pos?' active':'')+(id?' filled':'');
-   const select=document.createElement('button');select.type='button';select.className='position-select';
-   select.setAttribute('aria-label','Edit '+pos+(id?' '+name(id):' empty'));
-   select.onclick=()=>{selected=pos;render();if(window.matchMedia('(max-width: 1080px)').matches)$('pickerPanel').scrollIntoView({behavior:'smooth',block:'start'})};
-   const role=document.createElement('span');role.className='position-role';role.textContent=pos;
-   const img=document.createElement('img');img.className='position-pokemon';img.alt='';img.loading='lazy';if(id)img.src=sprite(id);
-   const labelName=document.createElement('strong');labelName.textContent=id?name(id):'+ Add Pokémon';
-   const cost=document.createElement('small');cost.textContent=id?'$'+salary(id):'Empty position';
-   select.append(role,img,labelName,cost);card.append(select);
-   if(id){const remove=document.createElement('button');remove.type='button';remove.className='position-clear';remove.title='Remove '+name(id)+' from '+pos;remove.setAttribute('aria-label',remove.title);remove.textContent='×';remove.onclick=()=>{selected=pos;removeSelected()};card.append(remove)}
-   grid.append(card);
-  }
-  group.append(grid);root.append(group);
+ const field=$('builderField');field.replaceChildren();
+ const stripe=document.createElement('div');stripe.className='field-midline';stripe.setAttribute('aria-hidden','true');field.append(stripe);
+ for(const [text,cls] of [['DEFENSE','defense'],['OFFENSE','offense']]){
+  const label=document.createElement('span');label.className='clean-field-label '+cls;label.textContent=text;field.append(label);
+ }
+ for(const pos of POS){
+  const id=lineup[pos],node=document.createElement('button');node.type='button';
+  node.className='field-player'+(id?' filled':' empty')+(selected===pos?' selected':'');
+  node.style.left=coords[pos][0]+'%';node.style.top=coords[pos][1]+'%';
+  node.setAttribute('aria-label',pos+': '+(id?name(id)+' $'+salary(id):'empty')+'. Select to edit');
+  node.title=pos+' · '+(id?name(id):'Choose Pokémon');
+  node.onclick=()=>{selected=pos;render();if(window.matchMedia('(max-width: 1080px)').matches)$('pickerPanel').scrollIntoView({behavior:'smooth',block:'start'})};
+  const role=document.createElement('span');role.className='field-player-role';role.textContent=pos;
+  const img=document.createElement('img');img.className='field-player-sprite';img.alt='';img.loading='lazy';if(id)img.src=sprite(id);
+  const nameplate=document.createElement('span');nameplate.className='field-player-name';nameplate.textContent=id?name(id):'Add player';
+  const price=document.createElement('span');price.className='field-player-price';price.textContent=id?'$'+salary(id):'+';
+  node.append(role,img,nameplate,price);field.append(node);
  }
 }
 function removeSelected(){const id=lineup[selected];if(!id)return;const removedName=name(id),refund=salary(id);delete lineup[selected];persist();render();score();message('Removed '+removedName+' from '+selected+'. $'+refund+' returned to your budget. Choose a replacement whenever you like.');}
