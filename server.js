@@ -89,7 +89,6 @@ const lineupProblem=lineup=>{
  if(db.length!==151)return 'Pokémon pricing is still loading. Try again shortly.';
  const total=lineupSalary(lineup);
  if(total>SALARY_CAP)return 'Team salary 
- return null;
 };
 const validLineup=lineup=>lineupProblem(lineup)===null;
 async function loggedIn(req){
@@ -369,7 +368,6 @@ http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(u
 }).listen(PORT,'0.0.0.0',()=>console.log('Pokémon Gridiron listening on '+PORT));
 setInterval(()=>{for(const [code,r] of rooms)if(Date.now()-r.created>21600000)rooms.delete(code)},3600000).unref();
 +total+' exceeds the 
- return null;
 };
 const validLineup=lineup=>lineupProblem(lineup)===null;
 async function loggedIn(req){
