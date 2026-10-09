@@ -31,3 +31,6 @@
 .modes{grid-template-columns:repeat(3,minmax(0,1fr))}.mode{min-height:340px;padding:27px}.mode>strong{font-size:clamp(31px,3.8vw,47px)}.entry-footer{margin:28px 0 0;color:#acc9bf}.entry-footer a{color:#d6fa79;text-decoration:none;font-size:13px;font-weight:750}
 @media(max-width:850px){.top-links{display:none}.modes{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.account-nav{padding:12px 15px;min-height:68px}.top-brand{font-size:21px}.account-nav .account-pill{padding:7px 9px;font-size:11px;min-height:44px}.account-nav .account-avatar{width:29px;height:29px}.modes{grid-template-columns:1fr}.entry-status{margin-top:-12px}.profile-dropdown{width:210px}}
+
+/* Friends Season is a first-class homepage game mode */
+.mode.season{background:radial-gradient(circle at 90% 10%,#9cd54a40,transparent 45%),linear-gradient(135deg,#305e3f,#173d3c 75%);border-color:#a5c973}.mode.season .mode-tag{color:#d6fa79}.mode.season .mode-icon{filter:drop-shadow(0 0 12px #c5f46a77)}.mode.season .mode-action{color:#e4ff9e}.mode.season:hover{border-color:#d6fa79;box-shadow:0 20px 60px #b7ed4a22}
