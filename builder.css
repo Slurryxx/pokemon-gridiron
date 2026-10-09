@@ -173,3 +173,72 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
 @media(max-width:430px){.clean-field{min-height:590px}.field-player{width:42px;min-height:72px}.field-player-sprite{width:35px;height:33px}.field-player-name{font-size:7px}.field-player-role,.field-player-price{font-size:8px}}
 
 @media(max-width:600px){.clean-field{min-height:560px}.field-player{touch-action:manipulation}.field-player-name{overflow:hidden;text-overflow:ellipsis}button,input,select{max-width:100%}}
+
+/* Focused phone drafting: position strip, market, and optional formation. */
+.mobile-draft-tools{display:none}
+@media(max-width:700px){
+ .shell{padding-inline:12px}
+ header{padding:13px 0;gap:8px;flex-wrap:wrap}
+ header b{font-size:20px}
+ header span{display:none}
+ .builder-hero{padding:20px 0 10px}
+ .builder-hero h1{font-size:clamp(36px,10vw,52px);line-height:1}
+ .builder-hero p{font-size:12px;margin-bottom:8px}
+ .budget-panel{position:sticky;top:0;z-index:35;padding:10px 12px;margin-bottom:12px;border-radius:12px}
+ .budget-panel .budget-top strong:first-child{font-size:10px}
+ .budget-panel .budget-top strong:last-child{font-size:20px}
+ .budget-track{height:10px;margin:7px 0 5px}
+ .budget-details{font-size:11px;margin:3px 0}
+ .budget-panel>small{display:none}
+ .builder-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+ .builder-actions>div:first-child{grid-column:1/-1;padding:8px 12px;min-width:0}
+ .builder-actions>div:first-child strong{font-size:17px}
+ .builder-actions .team-name-field{grid-column:1/-1;min-width:0}
+ .builder-actions .team-name-field input{width:100%;font-size:16px}
+ .builder-actions #generateDreamTeam,.builder-actions #saveDreamTeam{grid-column:auto;width:100%;min-width:0;min-height:48px;padding:10px 7px;font-size:12px}
+ .builder-actions>a{grid-column:1/-1;text-align:center;padding:7px}
+ .builder-actions #clearTeam{grid-column:1/-1;min-height:42px}
+ .builder-message{font-size:12px;margin:8px 0}
+ .mobile-draft-tools{display:block;background:#19362a;border:1px solid #7ba563;border-radius:13px;padding:13px 11px;margin:12px 0}
+ .mobile-draft-heading{display:flex;justify-content:space-between;gap:8px;align-items:center;color:#e9ffd6;font-size:12px;margin-bottom:12px}
+ .mobile-draft-heading span{color:#d6fa79;font-size:11px;font-weight:900}
+ .mobile-position-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+ .mobile-position-chip{min-width:0;min-height:46px;border:1px solid #60896b;border-radius:9px;background:#244b3a;color:#eff8e9;font-size:12px;font-weight:900;padding:7px 2px}
+ .mobile-position-chip.filled{background:#416d37;border-color:#9ed16b}
+ .mobile-position-chip.active{background:#d6fa79;border:2px solid #fff;color:#183526}
+ .mobile-formation-toggle{width:100%;margin-top:12px;min-height:42px;background:#25463a;color:#e4ffd2;border:1px solid #7ba563;border-radius:9px;font-weight:800}
+ .builder-layout{display:flex;flex-direction:column;gap:0}
+ .builder-layout>.lineup-panel{display:none}
+ .builder-layout>.lineup-panel.mobile-open{display:block;order:1;margin-top:12px}
+ .builder-layout>.picker-panel{order:0;padding:14px 12px;scroll-margin-top:100px}
+ .picker-panel .panel-heading{margin-bottom:8px}
+ .picker-panel .panel-heading h2{font-size:24px}
+ .picker-panel .panel-hint{display:none}
+ .mobile-picker-banner{display:block;background:#e8f6d9;color:#1d4b29;font-size:13px;font-weight:900;padding:11px;border-radius:9px;margin:8px 0 12px}
+ .recommendation-panel{margin:8px 0 12px;padding:10px}
+ .recommendation-heading{margin-bottom:8px}
+ .recommendation-heading small{display:none}
+ .picker-panel .recommended-choices{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .picker-panel .recommendation-card{display:flex;flex-direction:column;gap:3px;min-width:0;min-height:112px;padding:5px 2px;text-align:center}
+ .picker-panel .recommendation-card img{width:43px;height:43px}
+ .picker-panel .recommendation-card span{align-items:center}
+ .picker-panel .recommendation-card strong{font-size:10px}
+ .picker-panel .recommendation-card b{font-size:13px}
+ .picker-panel .recommendation-card small{font-size:9px}
+ .picker-panel .picker-controls{display:grid;grid-template-columns:minmax(0,1fr) 125px;gap:7px}
+ .picker-panel .picker-controls input,.picker-panel .picker-controls select{width:100%;min-width:0;min-height:46px;font-size:16px}
+ .picker-panel .pokemon-choices{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none;overflow:visible;gap:7px}
+ .picker-panel .pokemon-choice{min-height:118px;padding:8px 3px}
+ .picker-panel .pokemon-choice img{width:54px;height:54px}
+ .picker-panel .pokemon-choice strong{font-size:11px}
+ .picker-panel .pokemon-choice small{font-size:12px;padding:4px 8px}
+ .picker-guide{font-size:11px}
+ .clean-field{min-height:530px}
+ .roster-details{margin-top:18px}
+}
+@media(max-width:390px){
+ .mobile-position-groups{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .picker-panel .picker-controls{grid-template-columns:1fr}
+ .picker-panel .pokemon-choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .picker-panel .recommendation-card img{width:39px;height:39px}
+}
