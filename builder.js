@@ -3,7 +3,7 @@
 const POS=['QB','RB','WR1','WR2','WR3','TE','LT','LG','C','RG','RT','DE1','DE2','DT1','DT2','LB1','LB2','LB3','CB1','CB2','FS','SS'];
 const coords={FS:[40,7],SS:[60,7],CB1:[10,20],CB2:[90,20],LB1:[34,24],LB2:[50,24],LB3:[66,24],DE1:[23,37],DT1:[41,37],DT2:[59,37],DE2:[77,37],WR1:[8,59],WR2:[92,59],WR3:[18,75],TE:[79,59],LT:[31,59],LG:[40,59],C:[50,59],RG:[60,59],RT:[69,59],QB:[50,77],RB:[50,92]};
 const $=id=>document.getElementById(id),sprite=id=>'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png';
-let catalog=[],lineup={},selected='QB',salaryCap=250,saving=false,activeUsername='';
+let catalog=[],lineup={},selected='QB',salaryCap=300,saving=false,activeUsername='';
 const message=s=>$('builderMessage').textContent=s;
 const name=id=>catalog.find(p=>p.id===id)?.name||'Pokémon #'+id;
 const salary=id=>catalog.find(p=>p.id===id)?.salary||0;
