@@ -25,8 +25,8 @@ function stage(c){return CHAPTERS[c.chapter]||'Hall of Champions'}
 function choices(c){
  const week=c.week+1;
  return [
-  {id:'training',title:'Run intense training',detail:'Spend 15 credits. Improve preparation and team morale.',cost:15},
-  {id:'scout',title:'Scout the opposition',detail:'Spend 10 credits. Build scouting knowledge and reputation.',cost:10},
+  {id:'training',title:'Run intense training',detail:'Spend 15 credits. Improve morale and get a second chance at a stronger match performance.',cost:15},
+  {id:'scout',title:'Scout the opposition',detail:'Spend 10 credits. Scout for a game plan that minimizes turnovers.',cost:10},
   {id:'community',title:'Host a fan event',detail:'Earn 20 credits and grow your reputation.',cost:0},
   {id:'rest',title:'Protect your starters',detail:'Recover morale before kickoff.',cost:0}
  ];
@@ -82,7 +82,15 @@ async function storyAPI({pool,user,method,body,simulate,catalog,cap,validLineup}
    applyChoice(c,String(body.decision||''));
   }else if(body.action==='play'){
    if(!c.choice)throw Error('Choose a front-office strategy before kickoff.');
-   const opponent=opponentIndex(c),result=simulate([{lineup:c.teams[0].lineup},{lineup:c.teams[opponent].lineup}]);
+   const opponent=opponentIndex(c),players=[{lineup:c.teams[0].lineup},{lineup:c.teams[opponent].lineup}];
+   let result=simulate(players);
+   // Preparation matters on the field: training improves the score outcome,
+   // scouting favors the game with fewer offensive turnovers.
+   if(c.choice==='training'||c.choice==='scout'){
+    const alternative=simulate(players);
+    const advantage=g=>c.choice==='training'?(g.scores[0]-g.scores[1]):-(g.turnovers?.[0]||0);
+    if(advantage(alternative)>advantage(result))result=alternative;
+   }
    const win=result.scores[0]>result.scores[1],tie=result.scores[0]===result.scores[1];
    if(win)c.careerWins++;else if(!tie)c.careerLosses++;
    c.credits+=win?28:14;c.reputation+=win?3:1;c.morale=Math.max(10,Math.min(100,c.morale+(win?4:-5)));
