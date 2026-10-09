@@ -147,3 +147,27 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
 .position-card.active.filled{background:#eaf8dc}
 @media(max-width:1080px){.builder-layout{grid-template-columns:minmax(0,1fr)}.picker-panel .recommendation-card{flex-direction:row;text-align:left;justify-content:flex-start}.picker-panel .recommendation-card span{align-items:flex-start}}
 @media(max-width:600px){.picker-panel .recommended-choices{grid-template-columns:1fr}.picker-panel .pokemon-choices{grid-template-columns:repeat(2,minmax(0,1fr));max-height:560px}.picker-panel .recommendation-card{min-height:78px}.picker-panel .recommendation-card img{width:60px;height:60px}.picker-panel .picker-controls{flex-direction:column}.picker-panel .picker-controls input,.picker-panel .picker-controls select{width:100%;flex:auto}}
+
+/* Refined football formation: clean markings, compact sprites and readable labels. */
+.lineup-panel{min-width:0}
+.clean-field{position:relative;isolation:isolate;width:100%;min-height:700px;aspect-ratio:0.94;border-radius:18px;overflow:hidden;border:5px solid #dce9d1;background:repeating-linear-gradient(to bottom,#276846 0%,#276846 9.9%,#2b714c 10%,#2b714c 19.9%);box-shadow:inset 0 0 0 2px #ffffff30,0 12px 30px #123c2520}
+.clean-field:before{content:'';position:absolute;inset:4% 5%;border:2px solid #ffffff45;border-radius:3px;pointer-events:none}
+.field-midline{position:absolute;top:49%;left:5%;right:5%;border-top:3px solid #e4f7d46e;pointer-events:none}
+.clean-field-label{position:absolute;z-index:1;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:3px;font-weight:950;color:#e4f4e1a9;pointer-events:none}
+.clean-field-label.defense{top:2%}.clean-field-label.offense{top:51%}
+.field-player{position:absolute;z-index:2;transform:translate(-50%,-50%);width:clamp(48px,8.1%,72px);min-height:87px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:4px 2px 5px;border:2px solid #c7e4c3;border-radius:11px;background:#f6fff0f2;color:#173d27;box-shadow:0 3px 10px #09271b55;cursor:pointer;transition:background .12s,border-color .12s,box-shadow .12s}
+.field-player:hover{background:#fff;border-color:#b0d86b;z-index:5}
+.field-player.selected{border:3px solid #ffda63;background:#fff8d9;box-shadow:0 0 0 4px #ffe38c77,0 4px 12px #0005;z-index:4}
+.field-player:focus-visible{outline:3px solid #ffe17a;outline-offset:3px;z-index:6}
+.field-player.empty{background:#164a35e8;border-style:dashed;border-color:#b8d7b8;color:#f1fff1}
+.field-player-role{font-size:10px;line-height:1;font-weight:950;color:#427448}
+.field-player.empty .field-player-role{color:#e2f4df}
+.field-player-sprite{height:44px;width:48px;object-fit:contain;image-rendering:pixelated}
+.field-player.empty .field-player-sprite{height:24px}
+.field-player-name{display:block;max-width:100%;font-size:9px;line-height:1.15;font-weight:950;text-transform:capitalize;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field-player-price{font-size:10px;line-height:1.1;font-weight:950;color:#397338}
+.field-player.empty .field-player-price{color:#c9f06a}
+.field-helper{margin:10px 0 0;color:#587262;font-size:12px;line-height:1.5}
+@media(max-width:1080px){.clean-field{max-width:750px;margin-inline:auto;aspect-ratio:1.08;min-height:680px}}
+@media(max-width:700px){.clean-field{min-height:610px;aspect-ratio:auto}.field-player{width:48px;min-height:78px;padding:3px 1px}.field-player-sprite{width:40px;height:36px}.field-player-name{font-size:8px}.field-player-role,.field-player-price{font-size:9px}.clean-field-label{font-size:10px}}
+@media(max-width:430px){.clean-field{min-height:590px}.field-player{width:42px;min-height:72px}.field-player-sprite{width:35px;height:33px}.field-player-name{font-size:7px}.field-player-role,.field-player-price{font-size:8px}}
