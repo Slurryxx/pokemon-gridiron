@@ -40,6 +40,8 @@ async function lobbyAPI({pool,user,method,body,validLineup,seasonAPI,simulate,re
  if(!user)throw Error('Log in or create a profile before joining a season.');
  if(method!=='POST')throw Error('Method not allowed.');
  if(body.action==='create'){
+  const active=await pool.query("SELECT 1 FROM gridiron_season_lobbies WHERE owner_id=$1 AND status='active' LIMIT 1",[user.id]);
+  if(active.rows.length)throw Error('You already host an active friends season. Continue that season before creating another.');
   const name=String(body.name||'Friends League').trim().slice(0,48);
   if(name.length<3)throw Error('League name must be at least 3 characters.');
   let code;for(let i=0;i<5;i++){code=crypto.randomBytes(5).toString('hex').toUpperCase();const exists=await pool.query('SELECT 1 FROM gridiron_season_lobbies WHERE code=$1',[code]);if(!exists.rows.length)break}
@@ -66,6 +68,8 @@ async function lobbyAPI({pool,user,method,body,validLineup,seasonAPI,simulate,re
    if(!r.rows.length)throw Error('Season not found.');
    if(String(r.rows[0].owner_id)!==String(user.id))throw Error('Only the host can start this season.');
    if(r.rows[0].status!=='open')throw Error('Season already started.');
+   const other=await client.query("SELECT 1 FROM gridiron_season_lobbies WHERE owner_id=$1 AND status='active' AND code<>$2 LIMIT 1",[user.id,code]);
+   if(other.rows.length)throw Error('Finish your existing active season before starting another.');
    const d=await details(client,code,user.id,validLineup);
    if(!d.lobby.canStart)throw Error('At least two players must join and save valid Dream Teams before kickoff.');
    const players=d.lobby.members.map(m=>m.username);
