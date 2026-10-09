@@ -37,12 +37,12 @@ function simulate(players){
  const defense=[0,1].map(t=>POSITIONS.slice(11).reduce((n,p)=>n+rate(players[t].lineup[p],p),0)/11);
  const rand=()=>crypto.randomInt(1000000)/1000000;
  const mon=(t,pos)=>{const id=players[t].lineup[pos];return db[id-1]?.name||'Pokémon'};
- const emit=(quarter,kind,text,team)=>events.push({quarter,kind,text,team,scores:[...scores]});
+ let fieldSpot=25,fieldTeam=0;const emit=(quarter,kind,text,team,actors={})=>events.push({quarter,kind,text,team,scores:[...scores],spot:Math.max(0,Math.min(100,fieldSpot)),possession:fieldTeam,actors});
  for(let q=1;q<=4;q++){
   emit(q,'quarter','QUARTER '+q+' — Kickoff!',null);
   for(let drive=0;drive<6;drive++){
    const t=(q+drive)%2,opp=1-t,edge=offense[t]-defense[opp];
-   let spot=25,down=1,need=10;
+   let spot=25,down=1,need=10;fieldSpot=spot;fieldTeam=t;
    emit(q,'drive',names[t]+' takes possession at its own 25.',t);
    for(let play=0;play<12;play++){
     const passing=rand()<.55;
@@ -52,11 +52,11 @@ function simulate(players){
     if(rand()<turnoverChance){turnovers[t]++;emit(q,'turnover',passing?mon(t,'QB')+' is intercepted by '+defender+'!':runner+' fumbles! '+defender+' recovers for '+names[opp]+'!',opp);break}
     const gain=Math.max(-5,Math.round(5+edge*.16+(rand()-.5)*22));
     const action=passing?mon(t,'QB')+' finds '+runner+' for '+gain+' yards.':runner+' rushes for '+gain+' yards.';
-    spot+=gain;yards[t]+=gain;
-    if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+runner+' scores for '+names[t]+'! Extra point is good.',t);break}
-    if(spot<=0){scores[opp]+=2;emit(q,'safety','SAFETY! '+defender+' traps '+runner+' in the end zone!',opp);break}
-    if(gain>=need){down=1;need=10;emit(q,gain>=18?'bigplay':'play',action+(gain>=18?' HUGE GAIN!':' First down!'),t)}
-    else{down++;need=Math.max(1,need-gain);emit(q,gain>=18?'bigplay':'play',action+' ('+down+' & '+need+')',t)}
+    spot+=gain;fieldSpot=spot;yards[t]+=gain;const actors={offense:players[t].lineup.QB,defense:players[opp].lineup.LB1,carrier:players[t].lineup[passing?'WR1':'RB'],playType:passing?'pass':'run',gain};
+    if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+runner+' scores for '+names[t]+'! Extra point is good.',t,actors);break}
+    if(spot<=0){scores[opp]+=2;emit(q,'safety','SAFETY! '+defender+' traps '+runner+' in the end zone!',opp,actors);break}
+    if(gain>=need){down=1;need=10;emit(q,gain>=18?'bigplay':'play',action+(gain>=18?' HUGE GAIN!':' First down!'),t,actors)}
+    else{down++;need=Math.max(1,need-gain);emit(q,gain>=18?'bigplay':'play',action+' ('+down+' & '+need+')',t,actors)}
     if(down>4){if(spot>=60&&rand()<.7){scores[t]+=3;emit(q,'fieldgoal','FIELD GOAL! '+names[t]+' puts three on the board.',t)}else emit(q,'punt',names[t]+' punts the ball away.',t);break}
    }
   }
