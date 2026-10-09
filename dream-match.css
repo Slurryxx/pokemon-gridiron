@@ -3,3 +3,38 @@
 
 /* Embedded game replays inside a friends-season dashboard */
 .embedded-replay body{margin:0;background:#081b1c}.embedded-replay .battle-shell{width:100%;max-width:none;padding:0}.embedded-replay .battle-shell header{display:none}.embedded-replay #battleIntro{display:none!important}.embedded-replay .battle-shell .panel{margin:0;padding:12px}.embedded-replay .battle-field{height:clamp(320px,45vw,520px)}.embedded-replay #playLog{max-height:230px;overflow:auto}.embedded-replay .battle-mon img{width:clamp(25px,4vw,54px);height:clamp(25px,4vw,54px)}
+
+/* Dream Team Battles lobby refresh */
+.battle-shell{width:min(1160px,calc(100% - 32px));padding:18px 0 60px}
+.battle-shell header{display:flex;align-items:center;justify-content:flex-start;gap:12px;flex-wrap:wrap;padding:12px 0 20px;margin-bottom:18px;border-bottom:1px solid #3b5d50}
+.battle-shell header b{margin-right:auto;white-space:nowrap;font-weight:950}
+.battle-shell header a{font-size:11px;text-decoration:none;font-weight:800;color:#bed8c5;border:1px solid #466657;border-radius:9px;padding:10px 12px;min-height:40px;display:inline-flex;align-items:center}
+.battle-shell header a:hover{color:#d6fa79;border-color:#b1d87b}
+.battle-intro{margin:0}.battle-hero{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center;gap:25px;padding:clamp(24px,4vw,44px);border:1px solid #668d66;border-radius:18px;background:radial-gradient(circle at 90% 12%,#6f9d4b66,transparent 43%),linear-gradient(115deg,#214b39,#102e35);box-shadow:0 15px 45px #0003}
+.battle-hero-copy{position:relative;z-index:1;max-width:700px}.battle-kicker{font-size:10px;font-weight:950;letter-spacing:2px;color:#d6fa79}
+.battle-hero h1{font-size:clamp(44px,6.8vw,83px);line-height:.96;margin:13px 0 17px;letter-spacing:.2px}.battle-hero h1 em{font-style:normal;color:#d6fa79}
+.battle-hero p{max-width:590px;font-size:14px;line-height:1.75;color:#d2e3d8;margin:0}
+.battle-hero-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}.battle-hero-links a{display:inline-flex;align-items:center;min-height:44px;text-decoration:none;font-size:12px;font-weight:900;color:#e7ffbe;border:1px solid #8caf76;border-radius:9px;padding:12px 15px;background:#ffffff0b}
+.battle-hero-art{min-width:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:#e8ffb8}.battle-hero-art span{font-size:105px;filter:drop-shadow(0 10px 18px #0006)}.battle-hero-art small{font-weight:950;letter-spacing:5px}
+.battle-status{padding:12px 16px;margin:16px 0 26px;border:1px solid #577967;border-radius:10px;background:#17332d;color:#d6fa79;font-size:13px;line-height:1.5}
+.battle-section-title{margin:30px 0 18px}.battle-section-title h2{font-size:clamp(29px,4vw,43px);line-height:1;margin:8px 0 6px}.battle-section-title p{margin:0;color:#b4cdbd;font-size:13px;line-height:1.6}
+.battle-lobby-grid{display:grid;grid-template-columns:1.1fr .9fr;align-items:stretch;gap:16px}
+.battle-shell .battle-surface{margin:0;max-width:none;padding:24px;border:1px solid #4d7660;border-radius:15px;background:linear-gradient(155deg,#173a35,#11292e);display:flex;flex-direction:column;gap:12px;min-width:0}
+.battle-surface-heading{display:flex;gap:12px;align-items:center;margin-bottom:6px}.battle-step-icon{width:46px;height:46px;flex-shrink:0;display:grid;place-items:center;background:#345e42;border-radius:12px;font-size:24px}.battle-surface-heading h3{font-size:21px;line-height:1.15;margin:0 0 4px}.battle-surface-heading p{font-size:12px;color:#a9c8b6;margin:0;line-height:1.45}
+.battle-team-summary{padding:11px 13px;background:#254638;border:1px solid #628867;border-radius:9px;color:#d6fa79;font-size:12px;font-weight:800;line-height:1.5}
+.battle-surface label{font-size:10px;font-weight:950;letter-spacing:1.1px;color:#c3dcc8;margin:4px 0 -5px}
+.battle-surface input,.battle-surface select{width:100%;min-width:0;max-width:100%;min-height:48px;background:#0a232a;border:1px solid #678a79;border-radius:9px;color:#f5fff3;padding:12px 13px;font-size:14px}
+.battle-surface input:focus,.battle-surface select:focus{outline:2px solid #d6fa79;outline-offset:1px}
+.battle-shell .challenge-actions,.battle-shell .invite-actions{display:flex;gap:9px;align-items:stretch;flex-wrap:wrap;margin-top:6px}
+.battle-shell .challenge-actions button,.battle-shell .invite-actions button{margin:0;min-height:46px;padding:12px 17px;font-size:12px;border-radius:9px;font-weight:950}
+.battle-shell .challenge-actions .battle-primary,.battle-shell .invite-actions #copyInvite{background:#d6fa79;border:1px solid #d6fa79;color:#153523;flex:1}
+.battle-shell .challenge-actions .battle-refresh,.battle-shell .invite-actions #shareInvite{background:#2a4d3e;border:1px solid #7fa37a;color:#eaffd7}
+.battle-shell .invite-panel>p{margin:0;color:#c4d8c9;font-size:13px;line-height:1.65}
+.battle-shell .invite-panel #inviteFeedback{min-height:20px;font-size:12px;margin:0}
+.battle-action-note{margin:3px 0 0;font-size:12px;color:#b4cbbb;line-height:1.6}.battle-action-note a,.battle-friends-link{color:#d6fa79;font-weight:850;text-decoration:none}.battle-friends-link{margin-top:auto;padding-top:7px;font-size:12px}
+.battle-how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0 35px}.battle-how>div{padding:17px;border:1px solid #3d6051;background:#112b2e;border-radius:12px;display:flex;flex-direction:column;gap:5px}.battle-how span{font-weight:950;color:#d6fa79;font-size:11px}.battle-how strong{font-size:17px}.battle-how small{color:#a8c4b5;font-size:12px;line-height:1.5}
+.battle-shell #match{border:1px solid #507763;border-radius:15px;background:#102b2c;padding:clamp(12px,2.5vw,24px);margin-top:22px}.battle-shell #match .battle-section-title{margin:0 0 16px}.battle-shell #match .battle-section-title h2{overflow-wrap:anywhere}
+.battle-replay-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.battle-replay-controls button{min-height:44px;margin:0}.battle-replay-controls label{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.embedded-replay .battle-shell{width:100%;padding:0}.embedded-replay .battle-shell #match{margin:0;border:0;border-radius:0}
+@media(max-width:760px){.battle-lobby-grid{grid-template-columns:1fr}.battle-hero-art{min-width:90px}.battle-hero-art span{font-size:68px}.battle-shell header{gap:7px}.battle-shell header b{width:100%}.battle-shell header a{padding:9px 10px;font-size:10px}.battle-shell .battle-surface{padding:18px}}
+@media(max-width:520px){.battle-shell{width:calc(100% - 24px);padding-top:8px}.battle-hero{padding:24px 19px}.battle-hero-art{display:none}.battle-hero h1{font-size:clamp(42px,12vw,60px)}.battle-hero p{font-size:12px}.battle-hero-links a{flex:1;justify-content:center;font-size:11px;padding:10px}.battle-how{grid-template-columns:1fr;gap:8px}.battle-how>div{flex-direction:row;align-items:center;gap:12px;padding:12px}.battle-how>div small{margin-left:auto;text-align:right;max-width:54%}.battle-shell .challenge-actions .battle-primary{flex:1 1 100%}.battle-shell .challenge-actions .battle-refresh{flex:1}.battle-shell .invite-actions button{flex:1}.battle-shell #match{padding:10px}.battle-shell .score{gap:5px}.battle-shell .score span{font-size:10px}.battle-shell .score strong{font-size:28px}}
