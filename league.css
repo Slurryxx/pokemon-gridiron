@@ -5,3 +5,5 @@
 
 /* Integrated game replay viewer */
 .inline-game{margin-top:22px;border:1px solid #8bb46b!important;background:#0d282a!important}.inline-game-header{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}.inline-game-header h2{margin:6px 0}.inline-game-header button{padding:10px 15px;border:1px solid #769982;background:#23463b;color:#e5f9d7;border-radius:8px;cursor:pointer}.inline-game iframe{display:block;width:100%;height:830px;border:1px solid #456a56;border-radius:10px;background:#0b2225}.season-game a{display:inline-block;padding:9px 13px;border-radius:8px;background:#d6fa79;color:#153724!important;font-weight:900;text-decoration:none}.season-game a:hover{background:#ecffb4}@media(max-width:720px){.inline-game iframe{height:730px}}
+
+@media(max-width:650px){.inline-game iframe{height:590px;max-width:100%}.inline-game-header{align-items:stretch}.inline-game-header button{min-height:44px}.season-game a{white-space:normal;min-height:44px;display:inline-flex;align-items:center}.season-actions{flex-wrap:wrap}}
