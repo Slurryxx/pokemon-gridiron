@@ -21,11 +21,12 @@ function renderField(){
 function renderChoices(){
  $('pickerTitle').textContent='Pick your '+selected;
  const search=$('pokemonSearch').value.trim().toLowerCase(),used=new Set(Object.values(lineup).map(Number));
- const list=catalog.filter(p=>p.name.includes(search)).sort((a,b)=>a.id-b.id);
+ const sort=$('priceSort').value;const list=catalog.filter(p=>p.name.includes(search)).sort((a,b)=>sort==='low'?a.salary-b.salary||a.id-b.id:sort==='high'?b.salary-a.salary||a.id-b.id:sort==='name'?a.name.localeCompare(b.name):a.id-b.id);
+ $('pickerGuide').textContent='Editing '+selected+(lineup[selected]?' · '+name(lineup[selected])+' currently selected':' · Empty position')+' · '+list.length+' Pokémon found';
  $('pokemonChoices').replaceChildren(...list.map(p=>{
   const taken=used.has(p.id)&&lineup[selected]!==p.id;
   const tooExpensive=spent()-salary(lineup[selected])+p.salary>salaryCap;
-  const btn=document.createElement('button');btn.className='pokemon-choice'+(taken?' used':'');btn.disabled=taken||tooExpensive;btn.title=taken?'Already assigned to another position':tooExpensive?'Over salary cap':p.name;
+  const btn=document.createElement('button');btn.className='pokemon-choice'+(taken?' used':'')+(lineup[selected]===p.id?' chosen':'');btn.disabled=taken||tooExpensive;btn.title=taken?'Already assigned to another position':tooExpensive?'Over salary cap':p.name+' · '+p.salary+' credits';
   const img=document.createElement('img');img.src=sprite(p.id);img.loading='lazy';img.alt='';
   const title=document.createElement('strong');title.textContent=p.name;
   const cost=document.createElement('small');cost.textContent=p.salary+' cr';btn.append(img,title,cost);btn.onclick=()=>{lineup[selected]=p.id;const next=POS.find(pos=>!lineup[pos]);if(next)selected=next;persist();render();score()};return btn
@@ -34,7 +35,7 @@ function renderChoices(){
 function renderBreakdown(){
  $('breakdown').replaceChildren(...POS.map(pos=>{const row=document.createElement('div');row.className='breakdown-row';row.textContent=pos+' · '+(lineup[pos]?name(lineup[pos])+' · '+salary(lineup[pos])+' cr':'Open');return row}))
 }
-function render(){renderField();renderChoices();renderBreakdown();$('statusText').textContent=POS.filter(p=>lineup[p]).length+'/22 positions filled';budget()}
+function render(){renderField();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
 function persist(){const url=new URL(location.href);const encoded=POS.map(p=>lineup[p]||0).join('.');url.searchParams.set('team',encoded);history.replaceState({},'',url)}
 function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
 async function init(){
@@ -48,6 +49,7 @@ async function init(){
  }catch(e){message('Unable to load: '+e.message)}
 }
 $('pokemonSearch').oninput=renderChoices;
+$('priceSort').onchange=renderChoices;
 
 async function accountRequest(url,method,data){const r=await fetch(url,{method:method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
 $('saveDreamTeam').onclick=async()=>{try{const valid=new Set(catalog.map(p=>p.id));const missing=POS.filter(p=>!valid.has(lineup[p]));if(missing.length)throw Error('Fill or replace these positions: '+missing.join(', '));if(new Set(POS.map(p=>lineup[p])).size!==22)throw Error('Each position needs a different Pokémon.');if(spent()>salaryCap)throw Error('Over salary cap by '+(spent()-salaryCap)+' credits.');const name=$('teamName').value.trim()||'My Dream Team';const d=await accountRequest('/api/my-team','POST',{name,lineup});message('✓ Changes saved! Opening your Dream Team…');location.href='/my-team.html'}catch(e){if(/Log in/i.test(e.message)){message('Log in first to save your team.');location.href='/account.html?next='+encodeURIComponent('/builder.html')}else message(e.message)}};
