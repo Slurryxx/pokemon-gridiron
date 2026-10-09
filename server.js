@@ -1,4 +1,5 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const scouting=require('./scouting.js');
 const PORT=process.env.PORT||3000,rooms=new Map(),POSITIONS=['QB','RB','WR1','WR2','WR3','TE','LT','LG','C','RG','RT','DE1','DE2','DT1','DT2','LB1','LB2','LB3','CB1','CB2','FS','SS'];
 let db=[],error='';
 async function init(){
@@ -33,43 +34,73 @@ function rate(id,pos){const p=db[id-1],s=p.stats,sp=s.speed,atk=s.attack,def=s.d
 }
 function simulate(players){
  const names=['FOREST CITY','VOLT CITY'],scores=[0,0],yards=[0,0],turnovers=[0,0],events=[];
- const offense=[0,1].map(t=>POSITIONS.slice(0,11).reduce((n,p)=>n+rate(players[t].lineup[p],p),0)/11);
- const defense=[0,1].map(t=>POSITIONS.slice(11).reduce((n,p)=>n+rate(players[t].lineup[p],p),0)/11);
  const rand=()=>crypto.randomInt(1000000)/1000000;
- const mon=(t,pos)=>{const id=players[t].lineup[pos];return db[id-1]?.name||'Pokémon'};
- let fieldSpot=25,fieldTeam=0;const emit=(quarter,kind,text,team,actors={})=>events.push({quarter,kind,text,team,scores:[...scores],spot:Math.max(0,Math.min(100,fieldSpot)),possession:fieldTeam,actors});
+ const pick=a=>a[Math.floor(rand()*a.length)];
+ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+ const mon=(t,pos)=>db[players[t].lineup[pos]-1]?.name||'Pokémon';
+ const id=(t,pos)=>players[t].lineup[pos];
+ const groups={OL:['LT','LG','C','RG','RT'],DL:['DE1','DE2','DT1','DT2'],WR:['WR1','WR2','WR3','TE'],CB:['CB1','CB2','FS','SS'],LB:['LB1','LB2','LB3']};
+ const group=(t,arr)=>arr.reduce((sum,pos)=>sum+skill(t,pos),0)/arr.length;
+ function skill(t,pos){
+  const pokemon=id(t,pos),base=rate(pokemon,pos),sc=scouting(pokemon);
+  if(!sc)return base;
+  const category=pos==='QB'?'QB':pos==='RB'?'RB':pos.startsWith('WR')?'WR':pos==='TE'?'TE':groups.OL.includes(pos)?'OL':pos.startsWith('DE')?'EDGE':pos.startsWith('DT')?'IDL':pos.startsWith('LB')?'EDGE':pos.startsWith('CB')?'CB':'S';
+  const fit=sc.position===category?1:sc.position==='S'&&category==='CB'?.65:sc.position==='CB'&&category==='S'?.65:sc.position==='EDGE'&&pos.startsWith('LB')?.5:0;
+  // Scouting informs fit and performance, but never overrides official Pokémon attributes.
+  return base+(sc.grade-50)*.23*(fit?fit:-.25);
+ }
+ let fieldSpot=25,fieldTeam=0;
+ const emit=(quarter,kind,text,team,actors={})=>events.push({quarter,kind,text,team,scores:[...scores],spot:clamp(fieldSpot,0,100),possession:fieldTeam,actors});
  for(let q=1;q<=4;q++){
   emit(q,'quarter','QUARTER '+q+' — Kickoff!',null);
-  for(let drive=0;drive<6;drive++){
-   const t=(q+drive)%2,opp=1-t,edge=offense[t]-defense[opp];
+  for(let drive=0;drive<5;drive++){
+   const t=(q+drive)%2,opp=1-t;
    let spot=25,down=1,need=10;fieldSpot=spot;fieldTeam=t;
    emit(q,'drive',names[t]+' takes possession at its own 25.',t);
-   for(let play=0;play<12;play++){
-    const passing=rand()<.55;
-    const runner=passing?mon(t,['WR1','WR2','WR3','TE'][crypto.randomInt(4)]):mon(t,'RB');
-    const defender=mon(opp,['DE1','DE2','DT1','LB1','LB2','CB1','CB2','FS','SS'][crypto.randomInt(9)]);
-    const turnoverChance=Math.max(.012,Math.min(.09,.038-edge*.00025));
-    if(rand()<turnoverChance){turnovers[t]++;emit(q,'turnover',passing?mon(t,'QB')+' is intercepted by '+defender+'!':runner+' fumbles! '+defender+' recovers for '+names[opp]+'!',opp);break}
-    const gain=Math.max(-5,Math.round(5+edge*.16+(rand()-.5)*22));
-    const action=passing?mon(t,'QB')+' finds '+runner+' for '+gain+' yards.':runner+' rushes for '+gain+' yards.';
-    spot+=gain;fieldSpot=spot;yards[t]+=gain;const actors={offense:players[t].lineup.QB,defense:players[opp].lineup.LB1,carrier:players[t].lineup[passing?'WR1':'RB'],playType:passing?'pass':'run',gain};
-    if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+runner+' scores for '+names[t]+'! Extra point is good.',t,actors);break}
-    if(spot<=0){scores[opp]+=2;emit(q,'safety','SAFETY! '+defender+' traps '+runner+' in the end zone!',opp,actors);break}
-    if(gain>=need){down=1;need=10;emit(q,gain>=18?'bigplay':'play',action+(gain>=18?' HUGE GAIN!':' First down!'),t,actors)}
-    else{down++;need=Math.max(1,need-gain);emit(q,gain>=18?'bigplay':'play',action+' ('+down+' & '+need+')',t,actors)}
-    if(down>4){if(spot>=60&&rand()<.7){scores[t]+=3;emit(q,'fieldgoal','FIELD GOAL! '+names[t]+' puts three on the board.',t)}else emit(q,'punt',names[t]+' punts the ball away.',t);break}
+   for(let play=0;play<16;play++){
+    const passing=rand()<.54,receiver=pick(groups.WR),blocker=pick(groups.OL);
+    const defender=passing?pick(groups.CB):pick([...groups.LB,...groups.DL]);
+    const ballPos=passing?receiver:'RB',ballId=id(t,ballPos),defId=id(opp,defender);
+    const lineEdge=group(t,groups.OL)-group(opp,groups.DL);
+    const duel=passing?(skill(t,'QB')*.37+skill(t,receiver)*.42+lineEdge*.21-skill(opp,defender)*.65-skill(opp,pick(['DE1','DE2']))*.35):(skill(t,'RB')*.58+lineEdge*.42-skill(opp,defender)*.7-group(opp,groups.LB)*.3);
+    const actors={offense:id(t,passing?'QB':blocker),carrier:ballId,defense:defId,playType:passing?'pass':'run',gain:0,matchup:[mon(t,ballPos),mon(opp,defender)]};
+    if(passing){
+     const pressure=clamp(.1+(skill(opp,pick(groups.DL))-group(t,groups.OL))*.003,.04,.3);
+     if(rand()<pressure){const loss=crypto.randomInt(2,10);spot-=loss;fieldSpot=spot;yards[t]-=loss;actors.gain=-loss;down++;need+=loss;emit(q,'sack',mon(opp,defender)+' brings down '+mon(t,'QB')+' for a '+loss+'-yard loss!',opp,actors)}
+     else if(rand()>clamp(.63+duel*.004,.26,.86)){
+      const intercepted=rand()<clamp(.045-duel*.0005,.015,.12);
+      if(intercepted){turnovers[t]++;emit(q,'turnover','INTERCEPTION! '+mon(opp,defender)+' picks off '+mon(t,'QB')+'!',opp,actors);break}
+      down++;emit(q,'incomplete',mon(t,'QB')+' targets '+mon(t,receiver)+', but '+mon(opp,defender)+' breaks up the pass!',opp,actors)
+     }else{
+      const gain=clamp(Math.round(8+duel*.18+(rand()-.5)*30),0,55);
+      spot+=gain;fieldSpot=spot;yards[t]+=gain;actors.gain=gain;
+      if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,'QB')+' connects with '+mon(t,receiver)+' for the score!',t,actors);break}
+      const first=gain>=need;if(first){down=1;need=10}else{down++;need=Math.max(1,need-gain)}
+      emit(q,gain>=20?'bigplay':'play',mon(t,'QB')+' completes to '+mon(t,receiver)+' against '+mon(opp,defender)+' for '+gain+' yards.'+(first?' FIRST DOWN!':''),t,actors)
+     }
+    }else{
+     const gain=clamp(Math.round(4+duel*.16+(rand()-.5)*18),-5,35);
+     spot+=gain;fieldSpot=spot;yards[t]+=gain;actors.gain=gain;
+     if(rand()<clamp(.012-duel*.0001,.004,.04)){turnovers[t]++;emit(q,'turnover','FUMBLE! '+mon(t,'RB')+' loses the ball after contact from '+mon(opp,defender)+'!',opp,actors);break}
+     if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,'RB')+' powers past '+mon(opp,defender)+' into the end zone!',t,actors);break}
+     const first=gain>=need;if(first){down=1;need=10}else{down++;need=Math.max(1,need-gain)}
+     emit(q,gain>=16?'bigplay':'play',mon(t,'RB')+' runs behind '+mon(t,blocker)+'; '+mon(opp,defender)+' makes contact. '+gain+' yards.'+(first?' FIRST DOWN!':''),t,actors)
+    }
+    if(spot<=0){scores[opp]+=2;emit(q,'safety','SAFETY! '+names[opp]+' forces the ball into the end zone!',opp,actors);break}
+    if(down>4){if(spot>=62&&rand()<.78){scores[t]+=3;emit(q,'fieldgoal','FIELD GOAL! '+names[t]+' adds three points.',t)}else emit(q,'punt',names[t]+' punts on fourth down.',t);break}
    }
   }
   emit(q,'endquarter','END OF QUARTER '+q+' — '+scores[0]+' : '+scores[1],null);
  }
  if(scores[0]===scores[1]){
   emit(5,'quarter','OVERTIME! Next score wins.',null);
-  const winner=rand()<Math.max(.2,Math.min(.8,.5+(offense[0]-defense[1]-offense[1]+defense[0])*.01))?0:1;
+  const strength=t=>skill(t,'QB')+skill(t,'RB')+group(t,groups.WR)+group(t,groups.OL)+group(t,groups.DL)+group(t,groups.CB);
+  const winner=rand()<clamp(.5+(strength(0)-strength(1))*.002,.25,.75)?0:1;
   scores[winner]+=3;emit(5,'fieldgoal','OVERTIME WINNER! '+names[winner]+' kicks the winning field goal!',winner)
  }
  const winner=scores[0]>scores[1]?0:1;
  emit(5,'final',names[winner]+' WINS! FINAL: '+scores[0]+' – '+scores[1],winner);
- return {scores,yards,turnovers,events,log:events.map(e=>e.text),winner}
+ return {scores,yards,turnovers,events,log:events.map(e=>e.text),winner,engineVersion:2}
 }
 async function api(req,res,url){try{
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
