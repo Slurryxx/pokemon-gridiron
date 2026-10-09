@@ -57,15 +57,40 @@ $('challengeFriends').onclick=async()=>{
  try{await navigator.clipboard.writeText(url.href);message('Challenge link copied! Friends can build their own team, enter their name, and submit to the same leaderboard.')}
  catch{message('Send your friends this link: '+url.href)}
 };
+function submitFeedback(text,kind='info'){
+ const node=$('submitFeedback');node.textContent=text;node.dataset.kind=kind;message(text);
+}
 async function refreshBoard(){
- try{const r=await fetch('/api/leaderboard');if(!r.ok)throw Error('Could not load rankings');const data=await r.json();const list=$('leaderboardEntries');list.replaceChildren();if(!data.entries.length){list.textContent='No teams submitted yet. Be the first!';return}
- data.entries.forEach((entry,i)=>{const row=document.createElement('div');row.className='leaderboard-row';const rank=document.createElement('strong');rank.textContent='#'+(i+1);const title=document.createElement('span');title.textContent=entry.name;const grade=document.createElement('strong');grade.textContent=entry.score+'/100';const details=document.createElement('small');details.textContent='OFF '+entry.offense+' · DEF '+entry.defense;row.append(rank,title,details,grade);list.append(row)})
- }catch(e){message(e.message)}
+ try{
+  const r=await fetch('/api/leaderboard');const data=await r.json();
+  if(!r.ok)throw Error(data.error||'Could not load rankings');
+  const list=$('leaderboardEntries');list.replaceChildren();
+  if(!data.entries.length){list.textContent='No teams submitted yet. Be the first!';return}
+  data.entries.forEach((entry,i)=>{
+   const row=document.createElement('div');row.className='leaderboard-row';
+   const rank=document.createElement('strong');rank.textContent='#'+(i+1);
+   const title=document.createElement('span');title.textContent=entry.name;
+   const grade=document.createElement('strong');grade.textContent=entry.score+'/100';
+   const details=document.createElement('small');details.textContent='OFF '+entry.offense+' · DEF '+entry.defense;
+   row.append(rank,title,details,grade);list.append(row)
+  })
+ }catch(e){$('leaderboardEntries').textContent='Leaderboard unavailable: '+e.message}
 }
 $('submitTeam').onclick=async()=>{
- if(POS.some(p=>!lineup[p])){message('Fill all 22 positions before submitting');return}
- const name=$('teamName').value.trim();if(name.length<2){message('Enter a team name first');return}
- try{const r=await fetch('/api/leaderboard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,lineup})});const data=await r.json();if(!r.ok)throw Error(data.error);message(name+' submitted! Score: '+data.score+'/100 · Rank #'+data.rank);await refreshBoard()}catch(e){message(e.message)}
+ const button=$('submitTeam');
+ if(POS.some(p=>!lineup[p])){submitFeedback('Please fill all 22 positions before submitting. Use Auto-Build Best Team to test.','error');return}
+ const name=$('teamName').value.trim();
+ if(name.length<2){submitFeedback('Enter your name or team name (at least 2 characters).','error');$('teamName').focus();return}
+ button.disabled=true;button.textContent='Submitting…';
+ submitFeedback('Saving '+name+' to the community leaderboard…');
+ try{
+  const r=await fetch('/api/leaderboard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,lineup})});
+  const data=await r.json();
+  if(!r.ok)throw Error(data.error||'Submission failed (HTTP '+r.status+')');
+  submitFeedback('✓ '+name+' submitted! Score: '+data.score+'/100 · Rank #'+data.rank,'success');
+  await refreshBoard()
+ }catch(e){submitFeedback('Submission failed: '+e.message,'error')}
+ finally{button.disabled=false;button.textContent='Submit Lineup'}
 };
 $('refreshBoard').onclick=refreshBoard;
 refreshBoard();
