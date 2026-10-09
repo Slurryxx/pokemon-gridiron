@@ -9,7 +9,7 @@ const name=id=>catalog.find(p=>p.id===id)?.name||'Pokémon #'+id;
 const salary=id=>catalog.find(p=>p.id===id)?.salary||0;
 const spent=()=>POS.reduce((n,pos)=>n+salary(lineup[pos]),0);
 function budget(){const used=spent(),left=salaryCap-used;const node=$('salaryBudget');node.textContent='$'+used+' / $'+salaryCap;node.classList.toggle('over-cap',left<0);$('budgetRemaining').textContent=left>=0?'$'+left+' remaining':'$'+Math.abs(left)+' over cap';$('budgetRemaining').classList.toggle('over-cap',left<0);$('budgetPercent').textContent=Math.round(used/salaryCap*100)+'% used';$('salaryProgress').setAttribute('aria-valuemax',String(salaryCap));$('salaryProgress').setAttribute('aria-valuenow',String(used));$('saveDreamTeam').disabled=saving;$('budgetBar').style.width=Math.min(100,used/salaryCap*100)+'%';$('budgetBar').classList.toggle('over-cap',left<0)}
-function renderField(){
+function renderMobilePositions(){const root=$('mobilePositions');if(!root)return;root.replaceChildren();for(const pos of POS){const btn=document.createElement('button');btn.type='button';btn.className='mobile-position-chip';if(selected===pos)btn.classList.add('active');if(lineup[pos])btn.classList.add('filled');btn.textContent=pos+(lineup[pos]?' filled':' empty');btn.onclick=()=>{selected=pos;render();$('pickerPanel').scrollIntoView({behavior:'smooth',block:'start'})};root.append(btn)}$('mobileFilled').textContent=POS.filter(pos=>lineup[pos]).length+' / 22 selected';$('mobilePickerBanner').textContent='Editing '+selected;}function renderField(){
  const field=$('builderField');field.replaceChildren();
  const stripe=document.createElement('div');stripe.className='field-midline';stripe.setAttribute('aria-hidden','true');field.append(stripe);
  for(const [text,cls] of [['DEFENSE','defense'],['OFFENSE','offense']]){
@@ -84,7 +84,7 @@ function renderBreakdown(){
   return row
  }))
 }
-function render(){renderField();recommendations();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
+function render(){renderField();renderMobilePositions();recommendations();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
 function persist(){try{if(activeUsername)sessionStorage.setItem('gridiron_draft_lineup_'+activeUsername,JSON.stringify({lineup,name:$('teamName').value}));}catch{}}
 function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
 async function init(){
