@@ -186,6 +186,14 @@ async function accountAPI(req,res,url,b){
   res.setHeader('Set-Cookie',authCookie('',0));return json(res,200,{ok:true});
  }
  if(url.pathname==='/api/league'&&req.method==='GET'){await competitionDB();return json(res,200,{standings:await leagueRows(),rules:'3 points per accepted-match win; accepted matches only'});}
+ if(url.pathname==='/api/shared-match'&&req.method==='GET'){
+  const token=String(url.searchParams.get('token')||'');
+  if(!/^[a-f0-9]{48}$/.test(token))return json(res,400,{error:'Invalid replay link.'});
+  await pool.query('CREATE TABLE IF NOT EXISTS gridiron_match_shares(token TEXT PRIMARY KEY,match_id BIGINT NOT NULL REFERENCES gridiron_challenges(id),created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+  const shared=await pool.query('SELECT c.id,c.challenger_name,c.opponent_name,c.challenger_lineup,c.opponent_lineup,c.result FROM gridiron_match_shares s JOIN gridiron_challenges c ON c.id=s.match_id WHERE s.token=$1',[token]);
+  if(!shared.rows.length)return json(res,404,{error:'This replay link is unavailable.'});
+  const m=shared.rows[0];return json(res,200,{id:m.id,teamNames:[m.challenger_name,m.opponent_name],lineups:[m.challenger_lineup,m.opponent_lineup],result:m.result});
+ }
  if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
  if(url.pathname==='/api/showdown'&&(req.method==='GET'||req.method==='POST'))return json(res,200,await showdownAPI({pool,user,method:req.method,body:b,db,validLineup}));
  if(url.pathname==='/api/friends')return friendsAPI(req,res,url,b,user);
@@ -269,6 +277,16 @@ async function accountAPI(req,res,url,b){
   const result=simulate([{lineup:team.lineup},{lineup:opponent.lineup}]);
   const saved=await pool.query('INSERT INTO gridiron_challenges(challenger_id,opponent_id,challenger_name,opponent_name,challenger_lineup,opponent_lineup,result) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',[user.id,opponent.id,team.name,opponent.name,JSON.stringify(team.lineup),JSON.stringify(opponent.lineup),JSON.stringify(result)]);
   return json(res,200,{id:saved.rows[0].id});
+ }
+ if(url.pathname==='/api/share-match'&&req.method==='POST'){
+  const id=Number(b.id);if(!Number.isSafeInteger(id)||id<1)return json(res,400,{error:'Invalid match.'});
+  const owned=await pool.query('SELECT id FROM gridiron_challenges WHERE id=$1 AND (challenger_id=$2 OR opponent_id=$2)',[id,user.id]);
+  if(!owned.rows.length)return json(res,404,{error:'Match not found.'});
+  await pool.query('CREATE TABLE IF NOT EXISTS gridiron_match_shares(token TEXT PRIMARY KEY,match_id BIGINT NOT NULL REFERENCES gridiron_challenges(id),created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+  const existing=await pool.query('SELECT token FROM gridiron_match_shares WHERE match_id=$1 LIMIT 1',[id]);
+  const token=existing.rows[0]?.token||crypto.randomBytes(24).toString('hex');
+  if(!existing.rows.length)await pool.query('INSERT INTO gridiron_match_shares(token,match_id) VALUES($1,$2)',[token,id]);
+  return json(res,200,{url:'/dream-match.html?share='+token});
  }
  if(url.pathname==='/api/dream-match'&&req.method==='GET'){
   const id=Number(url.searchParams.get('id'));if(!Number.isSafeInteger(id)||id<1)return json(res,400,{error:'Invalid match ID'});
@@ -420,7 +438,7 @@ async function api(req,res,url){try{
  }
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,stats:p.stats,salary:pokemonSalary(p.id)}))});
  const b=req.method==='POST'?await body(req):{};
- if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season','/api/friends','/api/season-lobby','/api/showdown'].includes(url.pathname))return accountAPI(req,res,url,b);
+ if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/share-match','/api/shared-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season','/api/friends','/api/season-lobby','/api/showdown'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
  const r=room(b.code||url.searchParams.get('code'));
  if(url.pathname==='/api/join'&&req.method==='POST'){if(r.players[1]||r.phase!=='waiting')return json(res,409,{error:'Room full or already started'});const token=crypto.randomBytes(24).toString('hex');r.players[1]={token,ready:false};r.phase='draft';return json(res,200,{...view(r,1),token})}
