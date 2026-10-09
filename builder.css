@@ -108,3 +108,24 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
 .recommendation-card strong{font-size:12px;text-transform:capitalize;overflow-wrap:anywhere}
 .recommendation-card b{font-size:15px;color:#215c30}
 @media(max-width:660px){.recommended-choices{grid-template-columns:1fr}.recommendation-card{min-height:75px}.recommendation-card img{width:65px;height:65px}.recommendation-card strong{font-size:14px}}
+
+/* Compact team-building roster replaces the old formation field. */
+.builder-layout{grid-template-columns:minmax(0,1.08fr) minmax(390px,.92fr);align-items:start}
+.position-roster{display:flex;flex-direction:column;gap:24px}
+.position-group h3{font-size:13px;letter-spacing:2px;color:#356143;border-bottom:2px solid #d8e5d2;padding:0 0 9px;margin:0 0 12px}
+.position-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.position-card{position:relative;min-width:0;border:2px solid #d6e4d0;border-radius:14px;background:#fff;overflow:hidden;transition:border-color .15s,background .15s}
+.position-card.active{border-color:#6baf3c;background:#eaf8dc;box-shadow:0 0 0 3px #addc7c66}
+.position-card.filled{background:#f5fbf1}
+.position-select{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;min-height:152px;padding:10px 6px;border:0;background:transparent;color:#25422f;cursor:pointer}
+.position-select:hover{background:#eaf8dd}
+.position-select:focus-visible{outline:3px solid #9bbd43;outline-offset:-3px}
+.position-role{align-self:flex-start;font-size:11px;font-weight:950;color:#386444;background:#d9eacb;padding:3px 7px;border-radius:6px}
+.position-pokemon{height:75px;width:85px;object-fit:contain;image-rendering:pixelated}
+.position-select strong{font-size:12px;text-transform:capitalize;overflow-wrap:anywhere;line-height:1.2}
+.position-select small{font-size:12px;color:#477e40;font-weight:900}
+.position-clear{position:absolute;right:5px;top:5px;z-index:2;width:29px;height:29px;border:1px solid #d8a5a0;border-radius:8px;background:#fff0ed;color:#9a302a;font-size:20px;font-weight:900;cursor:pointer}
+.position-clear:hover{background:#ffd9d2}
+@media(max-width:1080px){.builder-layout{grid-template-columns:1fr}.position-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:700px){.position-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.position-select{min-height:134px;padding:8px 3px}.position-pokemon{height:63px;width:70px}.position-select strong{font-size:11px}.position-clear{width:26px;height:26px}}
+@media(max-width:380px){.position-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
