@@ -41,13 +41,14 @@ async function init(){
   const data=await response.json();catalog=data.pokemon;
   const saved=new URL(location.href).searchParams.get('team');
   if(saved){const ids=saved.split('.').map(Number),valid=new Set(catalog.map(p=>p.id));if(ids.length===22&&ids.every(n=>n===0||valid.has(n))){const nonzero=ids.filter(Boolean);if(new Set(nonzero).size===nonzero.length)POS.forEach((p,i)=>{if(ids[i])lineup[p]=ids[i]})}}
-  render();score();message('Choose your 22 Pokémon. Scouting hints and optimal lineup suggestions are hidden for competitive play.');
+  try{const me=await accountRequest('/api/my-team');if(me.team){lineup={...me.team.lineup};$('teamName').value=me.team.name;message('Editing '+me.team.name+' — change any position, then save your changes.')}else message('Build your first Dream Team: choose 22 Pokémon, then save.')}catch(e){if(/Log in/i.test(e.message)){location.replace('/account.html?next=/builder.html');return}message(e.message)}
+  render();score();
  }catch(e){message('Unable to load: '+e.message)}
 }
 $('pokemonSearch').oninput=renderChoices;
 
 async function accountRequest(url,method,data){const r=await fetch(url,{method:method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
-$('saveDreamTeam').onclick=async()=>{try{if(POS.some(p=>!lineup[p])||new Set(Object.values(lineup)).size!==22)throw Error('Fill all 22 positions with unique Pokémon first.');const name=$('teamName').value.trim()||'My Dream Team';const d=await accountRequest('/api/my-team','POST',{name,lineup});message('✓ '+d.name+' saved to your account! Challenge other teams in Dream Team Battles.')}catch(e){if(/Log in/i.test(e.message)){message('Log in first to save your team.');location.href='/account.html?next='+encodeURIComponent('/builder.html')}else message(e.message)}};
+$('saveDreamTeam').onclick=async()=>{try{if(POS.some(p=>!lineup[p])||new Set(Object.values(lineup)).size!==22)throw Error('Fill all 22 positions with unique Pokémon first.');const name=$('teamName').value.trim()||'My Dream Team';const d=await accountRequest('/api/my-team','POST',{name,lineup});message('✓ Changes saved! Opening your Dream Team…');location.href='/my-team.html'}catch(e){if(/Log in/i.test(e.message)){message('Log in first to save your team.');location.href='/account.html?next='+encodeURIComponent('/builder.html')}else message(e.message)}};
 $('loadDreamTeam').onclick=async()=>{try{const d=await accountRequest('/api/my-team');if(!d.team)throw Error('No saved team yet. Save one first.');lineup=d.team.lineup;$('teamName').value=d.team.name;persist();render();score();message('Loaded '+d.team.name+' from your account.')}catch(e){message(e.message)}};
 $('clearTeam').onclick=()=>{lineup={};selected='QB';persist();render();score();message('Lineup cleared')};
 $('shareTeam').onclick=async()=>{persist();try{await navigator.clipboard.writeText(location.href);message('Shareable lineup link copied!')}catch{message('Copy this URL to share: '+location.href)}};
