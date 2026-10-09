@@ -79,45 +79,54 @@ function simulate(players){
   // Scouting informs fit and performance, but never overrides official Pokémon attributes.
   return base+(sc.grade-50)*.23*(fit?fit:-.25);
  }
+ // Prefer actual moves from the Pokémon's PokéAPI moveset; never invent a move.
+ const moveFor=(pokemon,passing)=>{
+  const moves=db[pokemon-1]?.moves||[];
+  const pool=moves.map(x=>typeof x==='string'?x:x.name).filter(Boolean);
+  const preferred=passing?['thunderbolt','flamethrower','ice-beam','hyper-beam','psychic','shadow-ball','dragon-pulse','water-pulse','air-slash','swift','quick-attack','agility']:['extreme-speed','quick-attack','agility','double-edge','take-down','tackle','body-slam','rollout','headbutt','slam','aqua-jet','flame-charge','thunder-punch','mach-punch'];
+  return preferred.find(m=>pool.includes(m))||pick(pool)||null;
+ };
+ const moveLabel=m=>m?m.split('-').map(x=>x[0].toUpperCase()+x.slice(1)).join(' '):'a burst of speed';
+ const burst=(passing,duel)=>rand()<clamp((passing?.18:.12)+Math.max(-.06,Math.min(.13,duel*.002)),.08,.35);
  let fieldSpot=25,fieldTeam=0;
  const emit=(quarter,kind,text,team,actors={})=>events.push({quarter,kind,text,team,scores:[...scores],spot:clamp(fieldSpot,0,100),possession:fieldTeam,actors});
  for(let q=1;q<=4;q++){
   emit(q,'quarter','QUARTER '+q+' — Kickoff!',null);
-  for(let drive=0;drive<5;drive++){
+  for(let drive=0;drive<6;drive++){
    const t=(q+drive)%2,opp=1-t;
    let spot=25,down=1,need=10;fieldSpot=spot;fieldTeam=t;
    emit(q,'drive',names[t]+' takes possession at its own 25.',t);
    for(let play=0;play<16;play++){
-    const passing=rand()<.54,receiver=pick(groups.WR),blocker=pick(groups.OL);
+    const passing=rand()<.60,receiver=pick(groups.WR),blocker=pick(groups.OL);
     const defender=passing?pick(groups.CB):pick([...groups.LB,...groups.DL]);
     const ballPos=passing?receiver:'RB',ballId=id(t,ballPos),defId=id(opp,defender);
     const lineEdge=group(t,groups.OL)-group(opp,groups.DL);
     const duel=passing?(skill(t,'QB')*.37+skill(t,receiver)*.42+lineEdge*.21-skill(opp,defender)*.65-skill(opp,pick(['DE1','DE2']))*.35):(skill(t,'RB')*.58+lineEdge*.42-skill(opp,defender)*.7-group(opp,groups.LB)*.3);
-    const actors={offense:id(t,passing?'QB':blocker),carrier:ballId,defense:defId,playType:passing?'pass':'run',gain:0,matchup:[mon(t,ballPos),mon(opp,defender)]};
+    const move=moveFor(ballId,passing);const actors={offense:id(t,passing?'QB':blocker),carrier:ballId,defense:defId,playType:passing?'pass':'run',gain:0,move:moveLabel(move),matchup:[mon(t,ballPos),mon(opp,defender)]};
     if(passing){
      const pressure=clamp(.1+(skill(opp,pick(groups.DL))-group(t,groups.OL))*.003,.04,.3);
      if(rand()<pressure){const loss=crypto.randomInt(2,10);spot-=loss;fieldSpot=spot;yards[t]-=loss;actors.gain=-loss;down++;need+=loss;emit(q,'sack',mon(opp,defender)+' brings down '+mon(t,'QB')+' for a '+loss+'-yard loss!',opp,actors)}
-     else if(rand()>clamp(.63+duel*.004,.26,.86)){
+     else if(rand()>clamp(.76+duel*.004,.44,.92)){
       const intercepted=rand()<clamp(.045-duel*.0005,.015,.12);
       if(intercepted){turnovers[t]++;emit(q,'turnover','INTERCEPTION! '+mon(opp,defender)+' picks off '+mon(t,'QB')+'!',opp,actors);break}
       down++;emit(q,'incomplete',mon(t,'QB')+' targets '+mon(t,receiver)+', but '+mon(opp,defender)+' breaks up the pass!',opp,actors)
      }else{
-      const gain=clamp(Math.round(8+duel*.18+(rand()-.5)*30),0,55);
+      const explosive=burst(true,duel);const gain=clamp(Math.round((explosive?30:12)+duel*.2+(rand()-.5)*(explosive?75:30)),0,95);
       spot+=gain;fieldSpot=spot;yards[t]+=gain;actors.gain=gain;
-      if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,'QB')+' connects with '+mon(t,receiver)+' for the score!',t,actors);break}
+      if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,receiver)+' unleashes '+actors.move+' to finish a '+gain+'-yard strike from '+mon(t,'QB')+'!',t,actors);break}
       const first=gain>=need;if(first){down=1;need=10}else{down++;need=Math.max(1,need-gain)}
-      emit(q,gain>=20?'bigplay':'play',mon(t,'QB')+' completes to '+mon(t,receiver)+' against '+mon(opp,defender)+' for '+gain+' yards.'+(first?' FIRST DOWN!':''),t,actors)
+      emit(q,gain>=20?'bigplay':'play',gain>=20?'EXPLOSIVE! '+mon(t,receiver)+' uses '+actors.move+' to torch '+mon(opp,defender)+' on a '+gain+'-yard catch!':mon(t,'QB')+' finds '+mon(t,receiver)+' for '+gain+' yards against '+mon(opp,defender)+'.'+(first?' FIRST DOWN!':''),t,actors)
      }
     }else{
-     const gain=clamp(Math.round(4+duel*.16+(rand()-.5)*18),-5,35);
+     const explosive=burst(false,duel);const gain=clamp(Math.round((explosive?25:6)+duel*.17+(rand()-.5)*(explosive?90:20)),-5,95);
      spot+=gain;fieldSpot=spot;yards[t]+=gain;actors.gain=gain;
      if(rand()<clamp(.012-duel*.0001,.004,.04)){turnovers[t]++;emit(q,'turnover','FUMBLE! '+mon(t,'RB')+' loses the ball after contact from '+mon(opp,defender)+'!',opp,actors);break}
-     if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,'RB')+' powers past '+mon(opp,defender)+' into the end zone!',t,actors);break}
+     if(spot>=100){scores[t]+=7;emit(q,'touchdown','TOUCHDOWN! '+mon(t,'RB')+' uses '+actors.move+' to explode past '+mon(opp,defender)+' for a '+gain+'-yard rushing score!',t,actors);break}
      const first=gain>=need;if(first){down=1;need=10}else{down++;need=Math.max(1,need-gain)}
-     emit(q,gain>=16?'bigplay':'play',mon(t,'RB')+' runs behind '+mon(t,blocker)+'; '+mon(opp,defender)+' makes contact. '+gain+' yards.'+(first?' FIRST DOWN!':''),t,actors)
+     emit(q,gain>=18?'bigplay':'play',gain>=18?'BREAKAWAY! '+mon(t,'RB')+' fires off '+actors.move+' and blasts past '+mon(opp,defender)+' for '+gain+' yards!':mon(t,'RB')+' runs behind '+mon(t,blocker)+' for '+gain+' yards.'+(first?' FIRST DOWN!':''),t,actors)
     }
     if(spot<=0){scores[opp]+=2;emit(q,'safety','SAFETY! '+names[opp]+' forces the ball into the end zone!',opp,actors);break}
-    if(down>4){if(spot>=62&&rand()<.78){scores[t]+=3;emit(q,'fieldgoal','FIELD GOAL! '+names[t]+' adds three points.',t)}else emit(q,'punt',names[t]+' punts on fourth down.',t);break}
+    if(down>4){if(spot>=68&&rand()<.68){scores[t]+=3;emit(q,'fieldgoal','FIELD GOAL! '+names[t]+' adds three points.',t)}else emit(q,'punt',names[t]+' punts on fourth down.',t);break}
    }
   }
   emit(q,'endquarter','END OF QUARTER '+q+' — '+scores[0]+' : '+scores[1],null);
@@ -130,7 +139,7 @@ function simulate(players){
  }
  const winner=scores[0]>scores[1]?0:1;
  emit(5,'final',names[winner]+' WINS! FINAL: '+scores[0]+' – '+scores[1],winner);
- return {scores,yards,turnovers,events,log:events.map(e=>e.text),winner,engineVersion:2}
+ return {scores,yards,turnovers,events,log:events.map(e=>e.text),winner,engineVersion:3}
 }
 async function api(req,res,url){try{
 
