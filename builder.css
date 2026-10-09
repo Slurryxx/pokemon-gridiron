@@ -91,3 +91,20 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
 .roster-position-pick:hover{text-decoration:underline}
 .roster-remove{flex:0 0 38px;height:36px;border:1px solid #d58b7d;border-radius:9px;background:#fff0ec;color:#922f27;font-size:17px;font-weight:900;cursor:pointer}
 .roster-remove:hover{background:#ffd9d0}
+
+/* Fast, one-tap suggestions for the active football position */
+.recommendation-panel{margin:14px 0 20px;padding:15px;border:1px solid #b8d4aa;border-radius:15px;background:linear-gradient(135deg,#e7f6de,#f5faef)}
+.recommendation-heading{display:flex;justify-content:space-between;gap:10px;align-items:start;margin-bottom:12px}
+.recommendation-heading strong{display:block;font-size:17px;color:#23452d}
+.recommendation-heading small{display:block;color:#55715c;font-size:11px;line-height:1.5;margin-top:3px}
+.recommendation-heading>span{font-size:10px;letter-spacing:1px;font-weight:900;color:#3f713c;white-space:nowrap}
+.recommended-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.recommendation-card{display:flex;align-items:center;gap:7px;min-width:0;min-height:95px;padding:8px;border:2px solid #c1d8b7;border-radius:12px;background:#fff;color:#1d3d29;text-align:left;cursor:pointer;transition:transform .12s,border-color .12s}
+.recommendation-card:hover{transform:translateY(-2px);border-color:#6ea745;background:#f8ffef}
+.recommendation-card:focus-visible{outline:3px solid #d2aa32;outline-offset:2px}
+.recommendation-card img{width:56px;height:60px;object-fit:contain;image-rendering:pixelated;flex-shrink:0}
+.recommendation-card span{min-width:0;display:flex;flex-direction:column;gap:3px}
+.recommendation-card small{font-size:10px;color:#507c48;font-weight:900}
+.recommendation-card strong{font-size:12px;text-transform:capitalize;overflow-wrap:anywhere}
+.recommendation-card b{font-size:15px;color:#215c30}
+@media(max-width:660px){.recommended-choices{grid-template-columns:1fr}.recommendation-card{min-height:75px}.recommendation-card img{width:65px;height:65px}.recommendation-card strong{font-size:14px}}
