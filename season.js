@@ -22,19 +22,37 @@ function standings(season){
 }
 async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
  await pool.query('CREATE TABLE IF NOT EXISTS gridiron_seasons (owner_id BIGINT PRIMARY KEY REFERENCES gridiron_users(id) ON DELETE CASCADE, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
+ if(method==='GET'&&body.gameWeek&&body.gameIndex!==undefined){
+  const r=await pool.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1',[user.id]);
+  const season=r.rows[0]?.data;if(!season)throw Error('Season not found.');
+  const week=Number(body.gameWeek),index=Number(body.gameIndex);
+  if(!Number.isSafeInteger(week)||!Number.isSafeInteger(index)||week<1||index<0)throw Error('Invalid game.');
+  const game=season.rounds[week-1]?.games[index];if(!game?.result)throw Error('This game has not been simulated yet.');
+  const home=season.teams[game.home],away=season.teams[game.away];
+  return {match:{teamNames:[home.name,away.name],lineups:[home.lineup,away.lineup],result:game.result}};
+ }
  if(method==='GET'){
   const r=await pool.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1',[user.id]);
   const season=r.rows[0]?.data||null;return {season,standings:season?standings(season):[]};
  }
  if(method==='POST'&&body.action==='create'){
   if(!ready)throw Error('Pokémon database is still loading.');
-  const r=await pool.query('SELECT u.id,u.username,t.name,t.lineup FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id ORDER BY CASE WHEN u.id=$1 THEN 0 ELSE 1 END,t.updated_at DESC LIMIT 12',[user.id]);
+  const r=await pool.query('SELECT u.id,u.username,t.name,t.lineup FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id ORDER BY CASE WHEN u.id=$1 THEN 0 ELSE 1 END,t.updated_at DESC LIMIT 100',[user.id]);
   if(!r.rows.some(x=>String(x.id)===String(user.id)))throw Error('Save your Dream Team before creating a season.');
-  const teams=r.rows.filter(x=>validLineup(x.lineup)).map(x=>({username:x.username,name:x.name,lineup:x.lineup}));
+  const requested=Array.isArray(body.players)?body.players:null;
+  const eligible=r.rows.filter(x=>validLineup(x.lineup));
+  const chosen=requested?eligible.filter(x=>requested.includes(x.username)):eligible;
+  if(!chosen.some(x=>String(x.id)===String(user.id)))throw Error('Include your own saved Dream Team.');
+  if(chosen.length>12)throw Error('Choose no more than 12 teams.');
+  const teams=chosen.map(x=>({username:x.username,name:x.name,lineup:x.lineup}));
   if(teams.length<2)throw Error('At least two valid saved Dream Teams are needed to start a season.');
-  const season={version:1,createdAt:new Date().toISOString(),teams,rounds:fixtures(teams),currentWeek:0,finished:false};
+  const season={version:2,createdAt:new Date().toISOString(),teams,rounds:fixtures(teams),currentWeek:0,finished:false};
   await pool.query('INSERT INTO gridiron_seasons(owner_id,data,updated_at) VALUES($1,$2,NOW()) ON CONFLICT(owner_id) DO UPDATE SET data=$2,updated_at=NOW()',[user.id,JSON.stringify(season)]);
   return {season,standings:standings(season)};
+ }
+ if(method==='POST'&&body.action==='available'){
+  const r=await pool.query('SELECT u.username,t.name,t.lineup FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id ORDER BY CASE WHEN u.id=$1 THEN 0 ELSE 1 END,t.updated_at DESC LIMIT 100',[user.id]);
+  return {available:r.rows.filter(x=>validLineup(x.lineup)).map(x=>({username:x.username,name:x.name}))};
  }
  if(method==='POST'&&body.action==='advance'){
   if(!ready)throw Error('Pokémon database is still loading.');
@@ -49,7 +67,7 @@ async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
    for(const game of round.games){
     const home=season.teams[game.home],away=season.teams[game.away];
     const result=simulate([{lineup:home.lineup},{lineup:away.lineup}]);
-    game.result={scores:result.scores,winner:result.winner,yards:result.yards,turnovers:result.turnovers};
+    game.result=result;
    }
    season.currentWeek++;season.finished=season.currentWeek===season.rounds.length;
    await client.query('UPDATE gridiron_seasons SET data=$2,updated_at=NOW() WHERE owner_id=$1',[user.id,JSON.stringify(season)]);
