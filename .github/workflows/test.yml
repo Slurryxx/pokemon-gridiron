@@ -15,4 +15,7 @@ jobs:
       - run: node --check draft.js
       - run: node --check builder.js
       - run: node --check scouting.js
+      - name: Check every client-side script for syntax errors
+        run: |
+          for file in *.js; do node --check "$file"; done
       - run: node tests/simulation.test.js
