@@ -20,10 +20,11 @@ function standings(season){
  }
  return rows.sort((a,b)=>b.points-a.points||(b.for-b.against)-(a.for-a.against)||b.for-a.for||a.username.localeCompare(b.username)).map((row,i)=>({...row,rank:i+1,diff:row.for-row.against}));
 }
-async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
+async function seasonAPI({pool,user,method,body,simulate,validLineup,ready,ownerId}){
+ const seasonOwner=ownerId||user.id;
  await pool.query('CREATE TABLE IF NOT EXISTS gridiron_seasons (owner_id BIGINT PRIMARY KEY REFERENCES gridiron_users(id) ON DELETE CASCADE, data JSONB NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())');
  if(method==='GET'&&body.gameWeek&&body.gameIndex!==undefined){
-  const r=await pool.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1',[user.id]);
+  const r=await pool.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1',[seasonOwner]);
   const season=r.rows[0]?.data;if(!season)throw Error('Season not found.');
   const week=Number(body.gameWeek),index=Number(body.gameIndex);
   if(!Number.isSafeInteger(week)||!Number.isSafeInteger(index)||week<1||index<0)throw Error('Invalid game.');
@@ -32,14 +33,14 @@ async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
   return {match:{teamNames:[home.name,away.name],lineups:[home.lineup,away.lineup],result:game.result}};
  }
  if(method==='GET'){
-  const r=await pool.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1',[user.id]);
+  const r=await pool.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1',[seasonOwner]);
   const season=r.rows[0]?.data||null;return {season,standings:season?standings(season):[]};
  }
  if(method==='POST'&&body.action==='create'){
   if(!ready)throw Error('Pokémon database is still loading.');
-  const r=await pool.query('SELECT u.id,u.username,t.name,t.lineup FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id ORDER BY CASE WHEN u.id=$1 THEN 0 ELSE 1 END,t.updated_at DESC LIMIT 100',[user.id]);
-  if(!r.rows.some(x=>String(x.id)===String(user.id)))throw Error('Save your Dream Team before creating a season.');
   const requested=Array.isArray(body.players)?body.players:null;
+  const r=requested?await pool.query('SELECT u.id,u.username,t.name,t.lineup FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id WHERE u.username=ANY($1::text[]) ORDER BY CASE WHEN u.id=$2 THEN 0 ELSE 1 END,t.updated_at DESC',[requested,user.id]):await pool.query('SELECT u.id,u.username,t.name,t.lineup FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id ORDER BY CASE WHEN u.id=$1 THEN 0 ELSE 1 END,t.updated_at DESC LIMIT 100',[user.id]);
+  if(!r.rows.some(x=>String(x.id)===String(user.id)))throw Error('Save your Dream Team before creating a season.');
   const eligible=r.rows.filter(x=>validLineup(x.lineup));
   const chosen=requested?eligible.filter(x=>requested.includes(x.username)):eligible.slice(0,12);
   if(!chosen.some(x=>String(x.id)===String(user.id)))throw Error('Include your own saved Dream Team.');
@@ -47,7 +48,7 @@ async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
   const teams=chosen.map(x=>({username:x.username,name:x.name,lineup:x.lineup}));
   if(teams.length<2)throw Error('At least two valid saved Dream Teams are needed to start a season.');
   const season={version:2,createdAt:new Date().toISOString(),teams,rounds:fixtures(teams),currentWeek:0,finished:false};
-  await pool.query('INSERT INTO gridiron_seasons(owner_id,data,updated_at) VALUES($1,$2,NOW()) ON CONFLICT(owner_id) DO UPDATE SET data=$2,updated_at=NOW()',[user.id,JSON.stringify(season)]);
+  await pool.query('INSERT INTO gridiron_seasons(owner_id,data,updated_at) VALUES($1,$2,NOW()) ON CONFLICT(owner_id) DO UPDATE SET data=$2,updated_at=NOW()',[seasonOwner,JSON.stringify(season)]);
   return {season,standings:standings(season)};
  }
  if(method==='POST'&&body.action==='available'){
@@ -59,7 +60,7 @@ async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
   const client=await pool.connect();
   try{
    await client.query('BEGIN');
-   const r=await client.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1 FOR UPDATE',[user.id]);
+   const r=await client.query('SELECT data FROM gridiron_seasons WHERE owner_id=$1 FOR UPDATE',[seasonOwner]);
    if(!r.rows.length)throw Error('Create a season first.');
    const season=r.rows[0].data;
    if(season.finished)throw Error('Season already complete. Start a new season to play again.');
@@ -70,7 +71,7 @@ async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
     game.result=result;
    }
    season.currentWeek++;season.finished=season.currentWeek===season.rounds.length;
-   await client.query('UPDATE gridiron_seasons SET data=$2,updated_at=NOW() WHERE owner_id=$1',[user.id,JSON.stringify(season)]);
+   await client.query('UPDATE gridiron_seasons SET data=$2,updated_at=NOW() WHERE owner_id=$1',[seasonOwner,JSON.stringify(season)]);
    await client.query('COMMIT');return {season,standings:standings(season)};
   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
  }
