@@ -65,10 +65,24 @@ function fieldUpdate(e){
  const flash=$('field-flash');flash.textContent=({touchdown:'TOUCHDOWN!',turnover:'TURNOVER!',fieldgoal:'FIELD GOAL!',bigplay:'BIG PLAY!'})[e.kind]||'';
  flash.classList.remove('active');void flash.offsetWidth;if(flash.textContent)flash.classList.add('active');
 }
-function showEvent(e){fieldUpdate(e);$('livehome').textContent=e.scores[0];$('liveaway').textContent=e.scores[1];$('livequarter').textContent=e.quarter===5?'FINAL / OT':'Q'+e.quarter;$('livecall').textContent=e.text;const p=document.createElement('p');p.textContent=e.text;p.className='event-'+e.kind;$('plays').prepend(p)}
+function spotlight(e){
+ const el=$('highlight'),special=['bigplay','touchdown','turnover'].includes(e.kind);
+ if(!special||!e.actors?.carrier){el.hidden=true;return}
+ const hero=e.kind==='turnover'?e.actors.defense:e.actors.carrier;
+ el.hidden=false;el.classList.remove('show','touchdown','bigplay','turnover');void el.offsetWidth;
+ el.classList.add('show',e.kind);
+ $('highlightType').textContent=e.kind==='touchdown'?'🏆 TOUCHDOWN!':e.kind==='turnover'?'💥 GAME-CHANGING TURNOVER!':'⚡ EXPLOSIVE PLAY!';
+ $('highlightSprite').src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+hero+'.png';
+ $('highlightSprite').onerror=()=>{$('highlightSprite').onerror=null;$('highlightSprite').src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+hero+'.png'};
+ $('highlightSprite').alt=monName(hero);
+ $('highlightName').textContent=monName(hero).toUpperCase();
+ $('highlightMove').textContent=e.kind==='turnover'?'DEFENSIVE STOP':e.actors.move||'INCREDIBLE ATHLETICISM';
+ $('highlightDescription').textContent=e.text;
+}
+function showEvent(e){spotlight(e);fieldUpdate(e);$('livehome').textContent=e.scores[0];$('liveaway').textContent=e.scores[1];$('livequarter').textContent=e.quarter===5?'FINAL / OT':'Q'+e.quarter;$('livecall').textContent=e.text;const p=document.createElement('p');p.textContent=e.text;p.className='event-'+e.kind;$('plays').prepend(p)}
 function replayStop(){if(replayTimer)clearTimeout(replayTimer);replayTimer=null}
-function replayStart(){if(!room?.result)return;replayStop();replayIndex=0;$('plays').replaceChildren();$('final').hidden=true;$('totals').hidden=true;$('livehome').textContent='0';$('liveaway').textContent='0';$('livequarter').textContent='KICKOFF';$('livecall').textContent='Teams take the field!';fieldUpdate({spot:25,possession:0,kind:'kickoff'});replayNext()}
-function replayNext(){const r=room?.result;if(!r)return;const events=r.events||r.log.map(text=>({text,kind:'play',quarter:1,scores:r.scores}));if(replayIndex>=events.length){$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores.join(' – ');$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('final').hidden=false;$('totals').hidden=false;return}const e=events[replayIndex++];showEvent(e);replayTimer=setTimeout(replayNext,Number($('speed').value)*(e.kind==='touchdown'||e.kind==='turnover'?2:1))}
+function replayStart(){if(!room?.result)return;replayStop();replayIndex=0;$('plays').replaceChildren();$('final').hidden=true;$('totals').hidden=true;$('livehome').textContent='0';$('liveaway').textContent='0';$('livequarter').textContent='KICKOFF';$('livecall').textContent='Teams take the field!';fieldUpdate({spot:25,possession:0,kind:'kickoff'});$('highlight').hidden=true;replayNext()}
+function replayNext(){const r=room?.result;if(!r)return;const events=r.events||r.log.map(text=>({text,kind:'play',quarter:1,scores:r.scores}));if(replayIndex>=events.length){$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores.join(' – ');$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('final').hidden=false;$('totals').hidden=false;return}const e=events[replayIndex++];showEvent(e);replayTimer=setTimeout(replayNext,Number($('speed').value)*(['touchdown','turnover','bigplay'].includes(e.kind)?3:1))}
 function results(r){const key=room.code+'-'+r.scores.join('-')+'-'+(r.events?.length||r.log.length);if(replayKey===key)return;replayKey=key;$('winner').textContent='Game Day — Live Replay';replayStart()}
 $('replay').onclick=replayStart;
 $('skip').onclick=()=>{if(!room?.result)return;replayStop();const r=room.result;$('plays').replaceChildren();const events=r.events||[];if(events.length)showEvent(events[events.length-1]);$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores.join(' – ');$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('final').hidden=false;$('totals').hidden=false};
