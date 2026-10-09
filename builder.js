@@ -96,6 +96,7 @@ async function init(){
   render();score();
  }catch(e){message('Unable to load: '+e.message)}
 }
+document.getElementById('generateDreamTeam').onclick=()=>{message('Generating a lineup…');};
 $('pokemonSearch').oninput=renderChoices;
 $('priceSort').onchange=renderChoices;
 $('removePlayer').onclick=removeSelected;
