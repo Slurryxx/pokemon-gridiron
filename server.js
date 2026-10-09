@@ -187,7 +187,7 @@ async function accountAPI(req,res,url,b){
  if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
  if(url.pathname==='/api/friends')return friendsAPI(req,res,url,b,user);
  if(['/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))await competitionDB();
- if(url.pathname==='/api/season'&&(req.method==='GET'||req.method==='POST')){const data=await seasonAPI({pool,user,method:req.method,body:b,simulate,validLineup,ready:db.length===151});return json(res,200,data)}
+ if(url.pathname==='/api/season'&&(req.method==='GET'||req.method==='POST')){const data=await seasonAPI({pool,user,method:req.method,body:req.method==='GET'?{gameWeek:url.searchParams.get('week'),gameIndex:url.searchParams.get('game')}:b,simulate,validLineup,ready:db.length===151});return json(res,200,data)}
  if(url.pathname==='/api/profile'&&req.method==='GET'){
   const name=String(url.searchParams.get('username')||user.username).trim().toLowerCase();
   const p=await pool.query('SELECT u.id,u.username,t.name AS team_name,t.updated_at FROM gridiron_users u LEFT JOIN gridiron_teams t ON t.user_id=u.id WHERE u.username=$1',[name]);
