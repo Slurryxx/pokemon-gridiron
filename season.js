@@ -41,7 +41,7 @@ async function seasonAPI({pool,user,method,body,simulate,validLineup,ready}){
   if(!r.rows.some(x=>String(x.id)===String(user.id)))throw Error('Save your Dream Team before creating a season.');
   const requested=Array.isArray(body.players)?body.players:null;
   const eligible=r.rows.filter(x=>validLineup(x.lineup));
-  const chosen=requested?eligible.filter(x=>requested.includes(x.username)):eligible;
+  const chosen=requested?eligible.filter(x=>requested.includes(x.username)):eligible.slice(0,12);
   if(!chosen.some(x=>String(x.id)===String(user.id)))throw Error('Include your own saved Dream Team.');
   if(chosen.length>12)throw Error('Choose no more than 12 teams.');
   const teams=chosen.map(x=>({username:x.username,name:x.name,lineup:x.lineup}));
