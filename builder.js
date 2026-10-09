@@ -8,7 +8,7 @@ const message=s=>$('builderMessage').textContent=s;
 const name=id=>catalog.find(p=>p.id===id)?.name||'Pokémon #'+id;
 const salary=id=>catalog.find(p=>p.id===id)?.salary||0;
 const spent=()=>POS.reduce((n,pos)=>n+salary(lineup[pos]),0);
-function budget(){const used=spent(),left=salaryCap-used;const node=$('salaryBudget');node.textContent=used+' / '+salaryCap+' credits · '+(left>=0?left+' remaining':Math.abs(left)+' OVER CAP');node.classList.toggle('over-cap',left<0);$('saveDreamTeam').disabled=left<0;$('budgetBar').style.width=Math.min(100,used/salaryCap*100)+'%';$('budgetBar').classList.toggle('over-cap',left<0)}
+function budget(){const used=spent(),left=salaryCap-used;const node=$('salaryBudget');node.textContent='$'+used+' / $'+salaryCap;node.classList.toggle('over-cap',left<0);$('budgetRemaining').textContent=left>=0?'$'+left+' remaining':'$'+Math.abs(left)+' over cap';$('budgetRemaining').classList.toggle('over-cap',left<0);$('budgetPercent').textContent=Math.round(used/salaryCap*100)+'% used';$('salaryProgress').setAttribute('aria-valuemax',String(salaryCap));$('salaryProgress').setAttribute('aria-valuenow',String(used));$('saveDreamTeam').disabled=left<0;$('budgetBar').style.width=Math.min(100,used/salaryCap*100)+'%';$('budgetBar').classList.toggle('over-cap',left<0)}
 function renderField(){
  const field=$('builderField');field.replaceChildren();
  for(const [text,cls] of [['DEFENSE','formation-defense-label'],['OFFENSE','formation-offense-label']]){const label=document.createElement('span');label.className='formation-label '+cls;label.textContent=text;field.append(label)}
@@ -32,9 +32,7 @@ function renderChoices(){
   const cost=document.createElement('small');cost.textContent='btn.append(img,title,cost);btn.onclick=()=>{lineup[selected]=p.id;const next=POS.find(pos=>!lineup[pos]);if(next)selected=next;persist();render();score()};return btn
  }))
 }
-function renderBreakdown(){
- $('breakdown').replaceChildren(...POS.map(pos=>{const row=document.createElement('div');row.className='breakdown-row';row.textContent=pos+' · '+(lineup[pos]?name(lineup[pos])+' · '+':'Open');return row}))
-}
+function renderBreakdown(){ $('breakdown').replaceChildren(...POS.map(pos=>{const row=document.createElement('div');row.className='breakdown-row';row.textContent=pos+' · '+(lineup[pos]?name(lineup[pos])+' · $'+salary(lineup[pos]):'Open');return row})) }
 function render(){renderField();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
 function persist(){const url=new URL(location.href);const encoded=POS.map(p=>lineup[p]||0).join('.');url.searchParams.set('team',encoded);history.replaceState({},'',url)}
 function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
