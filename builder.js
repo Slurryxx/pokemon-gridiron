@@ -35,7 +35,7 @@ function fit(p,pos){
  const w=pos==='QB'?[2,1,1,1,3,2]:pos==='RB'?[2,3,1,3,0,0]:pos.startsWith('WR')?[1,2,0,4,2,0]:pos==='TE'?[3,2,3,1,0,1]:['LT','LG','C','RG','RT'].includes(pos)?[3,2,4,0,0,1]:pos.startsWith('DE')?[1,4,2,2,0,1]:pos.startsWith('DT')?[4,3,4,0,0,1]:pos.startsWith('LB')?[2,2,3,3,0,1]:pos.startsWith('CB')?[1,1,3,4,0,2]:[1,1,3,3,0,3];
  return ['hp','attack','defense','speed','special-attack','special-defense'].reduce((n,k,i)=>n+w[i]*stat(p,k),0);
 }
-function choose(p){lineup[selected]=p.id;selected=POS.find(pos=>!lineup[pos])||selected;persist();render();score();message('Added '+p.name+' to your lineup. Choose a Pokémon for '+selected+' next.');}
+function choose(p){const previous=selected;lineup[selected]=p.id;selected=POS.find(pos=>!lineup[pos])||selected;persist();if(window.matchMedia('(max-width:700px)').matches)$('pokemonSearch').value='';render();score();message('Added '+p.name+' to '+previous+'. Next: '+selected+'.');if(window.matchMedia('(max-width:700px)').matches)$('mobilePositions').scrollIntoView({behavior:'smooth',block:'start'});}
 function recommendations(){
  const target=$('recommendedChoices');target.replaceChildren();
  $('recommendationTitle').textContent='Quick picks for '+selected;
@@ -87,7 +87,7 @@ function renderBreakdown(){
 function render(){renderField();renderMobilePositions();recommendations();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
 function persist(){try{if(activeUsername)sessionStorage.setItem('gridiron_draft_lineup_'+activeUsername,JSON.stringify({lineup,name:$('teamName').value}));}catch{}}
 function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
-async function init(){
+$('mobileFormationToggle').onclick=()=>{const open=$('lineupPanel').classList.toggle('mobile-open');$('mobileFormationToggle').setAttribute('aria-expanded',String(open));$('mobileFormationToggle').textContent=open?'Hide formation':'Show formation'};async function init(){
  try{
   const response=await fetch('/api/catalog');if(!response.ok)throw Error('Could not load Pokémon');
   const data=await response.json();if(!data.ready)throw Error('Pokémon database is still loading. Please retry.');catalog=data.pokemon;salaryCap=data.salaryCap;
