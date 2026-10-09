@@ -192,10 +192,11 @@ async function accountAPI(req,res,url,b){
  if(url.pathname==='/api/season'&&(req.method==='GET'||req.method==='POST')){
   const code=url.searchParams.get('code')||b.code;
   const access=code?await seasonAccess(pool,code,user):null;
-  if(access&&access.status!=='active')return json(res,409,{error:'This season has not started yet.'});
+  if(access&&access.status==='open')return json(res,409,{error:'This season has not started yet.'});
+  if(access&&req.method==='POST'&&access.status!=='active')return json(res,409,{error:'This season is complete.'});
   if(access&&req.method==='POST'&&!access.host)return json(res,403,{error:'Only the season host can simulate the next week.'});
   if(access&&b.action==='create')return json(res,403,{error:'Use the lobby to start your friends season.'});
-  const data=await seasonAPI({pool,user,ownerId:access?.ownerId,method:req.method,body:req.method==='GET'?{gameWeek:url.searchParams.get('week'),gameIndex:url.searchParams.get('game')}:b,simulate,validLineup,ready:db.length===151});return json(res,200,data)
+  const data=await seasonAPI({pool,user,ownerId:access?.ownerId,method:req.method,body:req.method==='GET'?{gameWeek:url.searchParams.get('week'),gameIndex:url.searchParams.get('game')}:b,simulate,validLineup,ready:db.length===151});if(access&&req.method==='POST'&&data.season?.finished)await pool.query("UPDATE gridiron_season_lobbies SET status='finished' WHERE code=$1",[String(code).toUpperCase()]);return json(res,200,data)
  }
  if(url.pathname==='/api/profile'&&req.method==='GET'){
   const name=String(url.searchParams.get('username')||user.username).trim().toLowerCase();
