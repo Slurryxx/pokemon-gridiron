@@ -33,3 +33,22 @@
 .roster-slot.empty .roster-name{color:#9aa89a}
 @media(max-width:750px){.roster-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:400px){.roster-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* Two full-team football formation boards */
+main{grid-template-columns:minmax(0,1fr) minmax(440px,1.05fr)}
+.formation-field{position:relative;width:100%;aspect-ratio:1.22;min-height:440px;overflow:hidden;border:4px solid #e9f2e3;border-radius:9px;background:repeating-linear-gradient(0deg,#337f45 0%,#337f45 9.7%,#3c8a4e 9.7%,#3c8a4e 10%);box-shadow:inset 0 0 0 2px #205d34}
+.formation-field:before{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0%,transparent calc(10% - 2px),#e5f4df8c calc(10% - 2px),#e5f4df8c 10%)}
+.formation-field:after{content:'';position:absolute;top:48%;left:0;right:0;border-top:3px solid #fff8;pointer-events:none}
+.formation-label{position:absolute;z-index:1;left:2%;color:#e7ffda99;font-size:11px;letter-spacing:3px;font-weight:900}
+.formation-defense-label{top:3%}.formation-offense-label{top:52%}
+.formation-player{position:absolute;z-index:2;transform:translate(-50%,-50%);width:17%;max-width:88px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-height:55px;pointer-events:none}
+.formation-sprite{width:100%;height:62px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 3px 2px #163b23)}
+.formation-nameplate{background:#101a19;color:#fff;border:1px solid #354d47;border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;min-height:27px;padding:3px 2px;line-height:1.15;box-shadow:0 2px 3px #142d25a8}
+.formation-nameplate strong{font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.formation-nameplate small{font-size:9px;color:#a8d6f5;font-weight:800}
+.formation-team-1 .formation-nameplate small{color:#ffce83}
+.formation-player.vacant .formation-sprite{height:36px;opacity:0}
+.formation-player.vacant .formation-nameplate{background:#1a462b9e;border:1px dashed #b7dfb9a0;color:#d5e9d6}
+.formation-hint{font-size:10px!important;text-align:center;margin:8px 0 0}
+@media(max-width:1000px){main{grid-template-columns:1fr}.formation-field{aspect-ratio:1.4;min-height:360px}.formation-sprite{height:70px}}
+@media(max-width:540px){.formation-field{aspect-ratio:.94;min-height:390px}.formation-player{width:18%}.formation-sprite{height:42px}.formation-nameplate strong{font-size:7px}.formation-nameplate small{font-size:8px}.formation-label{font-size:9px}.formation-nameplate{min-height:24px}}
