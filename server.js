@@ -41,6 +41,37 @@ async function accountsDB(){
  await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_teams(user_id BIGINT PRIMARY KEY REFERENCES gridiron_users(id) ON DELETE CASCADE,name VARCHAR(40) NOT NULL,lineup JSONB NOT NULL,updated_at TIMESTAMPTZ DEFAULT NOW())`);
  await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_challenges(id BIGSERIAL PRIMARY KEY,challenger_id BIGINT NOT NULL REFERENCES gridiron_users(id),opponent_id BIGINT NOT NULL REFERENCES gridiron_users(id),challenger_name TEXT NOT NULL,opponent_name TEXT NOT NULL,challenger_lineup JSONB NOT NULL,opponent_lineup JSONB NOT NULL,result JSONB NOT NULL,created_at TIMESTAMPTZ DEFAULT NOW())`);
 }
+
+// Competitive league: only accepted challenges count towards standings.
+let competitionReady=null;
+async function competitionDB(){
+ if(!competitionReady)competitionReady=pool.query(`CREATE TABLE IF NOT EXISTS gridiron_inbox(
+ id BIGSERIAL PRIMARY KEY,
+ challenger_id BIGINT NOT NULL REFERENCES gridiron_users(id),
+ opponent_id BIGINT NOT NULL REFERENCES gridiron_users(id),
+ challenger_name TEXT NOT NULL,
+ opponent_name TEXT NOT NULL,
+ challenger_lineup JSONB NOT NULL,
+ opponent_lineup JSONB NOT NULL,
+ status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined')),
+ match_id BIGINT REFERENCES gridiron_challenges(id),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ responded_at TIMESTAMPTZ
+ )`).catch(e=>{competitionReady=null;throw e});
+ await competitionReady;
+}
+async function leagueRows(){
+ const q=await pool.query(`SELECT u.username,t.name AS team_name,
+ COUNT(i.id) FILTER (WHERE i.status='accepted')::int AS played,
+ COUNT(i.id) FILTER (WHERE i.status='accepted' AND ((i.challenger_id=u.id AND (c.result->>'winner')::int=0) OR (i.opponent_id=u.id AND (c.result->>'winner')::int=1)))::int AS wins,
+ COUNT(i.id) FILTER (WHERE i.status='accepted' AND ((i.challenger_id=u.id AND (c.result->>'winner')::int=1) OR (i.opponent_id=u.id AND (c.result->>'winner')::int=0)))::int AS losses
+ FROM gridiron_users u JOIN gridiron_teams t ON t.user_id=u.id
+ LEFT JOIN gridiron_inbox i ON i.status='accepted' AND (i.challenger_id=u.id OR i.opponent_id=u.id)
+ LEFT JOIN gridiron_challenges c ON c.id=i.match_id
+ GROUP BY u.id,u.username,t.name
+ ORDER BY wins DESC, losses ASC, played DESC, u.username ASC LIMIT 200`);
+ return q.rows.map((r,i)=>({...r,rank:i+1,points:r.wins*3}));
+}
 const validLineup=lineup=>lineup&&typeof lineup==='object'&&POSITIONS.every(p=>Number.isInteger(lineup[p])&&lineup[p]>=1&&lineup[p]<=151)&&new Set(POSITIONS.map(p=>lineup[p])).size===22;
 async function loggedIn(req){
  const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(AUTH_COOKIE+'='));
@@ -80,6 +111,53 @@ async function accountAPI(req,res,url,b){
   res.setHeader('Set-Cookie',authCookie('',0));return json(res,200,{ok:true});
  }
  if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
+ if(['/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))await competitionDB();
+ if(url.pathname==='/api/league'&&req.method==='GET')return json(res,200,{standings:await leagueRows(),rules:'3 points per accepted-match win; accepted matches only'});
+ if(url.pathname==='/api/profile'&&req.method==='GET'){
+  const name=String(url.searchParams.get('username')||user.username).trim().toLowerCase();
+  const p=await pool.query('SELECT u.id,u.username,t.name AS team_name,t.updated_at FROM gridiron_users u LEFT JOIN gridiron_teams t ON t.user_id=u.id WHERE u.username=$1',[name]);
+  if(!p.rows.length)return json(res,404,{error:'Player not found'});
+  const player=p.rows[0],standings=await leagueRows(),standing=standings.find(x=>x.username===name)||null;
+  const recent=await pool.query(`SELECT i.id,i.status,i.created_at,i.match_id,a.username AS challenger,b.username AS opponent,c.result->'scores' AS scores,c.result->>'winner' AS winner FROM gridiron_inbox i JOIN gridiron_users a ON a.id=i.challenger_id JOIN gridiron_users b ON b.id=i.opponent_id LEFT JOIN gridiron_challenges c ON c.id=i.match_id WHERE (i.challenger_id=$1 OR i.opponent_id=$1) AND i.status='accepted' ORDER BY i.responded_at DESC LIMIT 15`,[player.id]);
+  return json(res,200,{player:{username:player.username,teamName:player.team_name,rank:standing?.rank||null,wins:standing?.wins||0,losses:standing?.losses||0,points:standing?.points||0},recent:recent.rows});
+ }
+ if(url.pathname==='/api/inbox'&&req.method==='GET'){
+  const r=await pool.query(`SELECT i.id,i.status,i.created_at,i.responded_at,i.match_id,a.username AS challenger,b.username AS opponent,i.challenger_name,i.opponent_name FROM gridiron_inbox i JOIN gridiron_users a ON a.id=i.challenger_id JOIN gridiron_users b ON b.id=i.opponent_id WHERE i.challenger_id=$1 OR i.opponent_id=$1 ORDER BY i.created_at DESC LIMIT 100`,[user.id]);
+  return json(res,200,{username:user.username,challenges:r.rows});
+ }
+ if(url.pathname==='/api/challenge/send'&&req.method==='POST'){
+  const name=String(b.username||'').trim().toLowerCase();
+  if(name===user.username)return json(res,400,{error:'Challenge another player, not yourself.'});
+  const opp=await pool.query('SELECT u.id,u.username,t.name,t.lineup FROM gridiron_users u JOIN gridiron_teams t ON t.user_id=u.id WHERE u.username=$1',[name]);
+  const mine=await pool.query('SELECT name,lineup FROM gridiron_teams WHERE user_id=$1',[user.id]);
+  if(!opp.rows.length)return json(res,404,{error:'Opponent has not saved a Dream Team.'});
+  if(!mine.rows.length)return json(res,400,{error:'Save your Dream Team first.'});
+  if(!validLineup(mine.rows[0].lineup)||!validLineup(opp.rows[0].lineup))return json(res,400,{error:'Invalid team lineup.'});
+  const existing=await pool.query("SELECT id FROM gridiron_inbox WHERE challenger_id=$1 AND opponent_id=$2 AND status='pending' LIMIT 1",[user.id,opp.rows[0].id]);
+  if(existing.rows.length)return json(res,409,{error:'You already have a pending challenge to this player.'});
+  const r=await pool.query('INSERT INTO gridiron_inbox(challenger_id,opponent_id,challenger_name,opponent_name,challenger_lineup,opponent_lineup) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',[user.id,opp.rows[0].id,mine.rows[0].name,opp.rows[0].name,JSON.stringify(mine.rows[0].lineup),JSON.stringify(opp.rows[0].lineup)]);
+  return json(res,200,{id:r.rows[0].id,status:'pending'});
+ }
+ if(url.pathname==='/api/challenge/respond'&&req.method==='POST'){
+  const id=Number(b.id),action=String(b.action||'');
+  if(!Number.isSafeInteger(id)||id<1||!['accept','decline'].includes(action))return json(res,400,{error:'Invalid challenge action.'});
+  const client=await pool.connect();
+  try{
+   await client.query('BEGIN');
+   const r=await client.query("SELECT * FROM gridiron_inbox WHERE id=$1 AND opponent_id=$2 AND status='pending' FOR UPDATE",[id,user.id]);
+   if(!r.rows.length){await client.query('ROLLBACK');return json(res,409,{error:'Challenge is unavailable or already answered.'})}
+   const c=r.rows[0];
+   if(action==='decline'){
+    await client.query("UPDATE gridiron_inbox SET status='declined',responded_at=NOW() WHERE id=$1",[id]);
+    await client.query('COMMIT');return json(res,200,{status:'declined'});
+   }
+   if(db.length!==151){await client.query('ROLLBACK');return json(res,503,{error:'Pokémon data still loading.'})}
+   const result=simulate([{lineup:c.challenger_lineup},{lineup:c.opponent_lineup}]);
+   const saved=await client.query('INSERT INTO gridiron_challenges(challenger_id,opponent_id,challenger_name,opponent_name,challenger_lineup,opponent_lineup,result) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',[c.challenger_id,c.opponent_id,c.challenger_name,c.opponent_name,JSON.stringify(c.challenger_lineup),JSON.stringify(c.opponent_lineup),JSON.stringify(result)]);
+   await client.query("UPDATE gridiron_inbox SET status='accepted',match_id=$2,responded_at=NOW() WHERE id=$1",[id,saved.rows[0].id]);
+   await client.query('COMMIT');return json(res,200,{status:'accepted',matchId:saved.rows[0].id});
+  }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
+ }
  if(url.pathname==='/api/my-team'&&req.method==='GET'){
   const r=await pool.query('SELECT name,lineup,updated_at FROM gridiron_teams WHERE user_id=$1',[user.id]);return json(res,200,{team:r.rows[0]||null,user:{username:user.username}});
  }
@@ -255,7 +333,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,pokemon:db.map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg}))});
  const b=req.method==='POST'?await body(req):{};
- if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match'].includes(url.pathname))return accountAPI(req,res,url,b);
+ if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
  const r=room(b.code||url.searchParams.get('code'));
  if(url.pathname==='/api/join'&&req.method==='POST'){if(r.players[1]||r.phase!=='waiting')return json(res,409,{error:'Room full or already started'});const token=crypto.randomBytes(24).toString('hex');r.players[1]={token,ready:false};r.phase='draft';return json(res,200,{...view(r,1),token})}
