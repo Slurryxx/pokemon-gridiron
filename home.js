@@ -1,1 +1,1 @@
-(()=>{'use strict';const status=document.getElementById('entryStatus');status.textContent='Opening username entry…';fetch('/api/auth/logout',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{}).finally(()=>location.replace('/account.html'));})();
+(()=>{'use strict';location.replace('/account.html');})();
