@@ -20,7 +20,7 @@ function formation(e){
  $('battleFlash').textContent=({touchdown:'🏆 TOUCHDOWN!',bigplay:'⚡ BIG PLAY!',turnover:'💥 TURNOVER!',fieldgoal:'FIELD GOAL!'})[e.kind]||'';
  if(!playing)return;
  const duration=Number($('speed').value)*.8,actors=e.actors,pass=actors.playType==='pass';
- const carrier=offense.find(p=>match.lineups[t][p]===actors.carrier)||(pass?'WR1':'RB');
+ const carrier=actors.carrierPosition||offense.find(p=>match.lineups[t][p]===actors.carrier)||(pass?'WR1':'RB');
  const defender=defense.find(p=>match.lineups[opp][p]===actors.defense)||'LB2';
  after(()=>{
   for(const pos of offense)move(t,pos,pos.startsWith('WR')||pos==='TE'?front+d*12:pos==='QB'?back:front+d*4,lanes[pos],duration*.4);
@@ -32,8 +32,8 @@ function formation(e){
   for(const pos of offense.filter(p=>p!==carrier&&p!=='QB'))move(t,pos,clamp(x+d*12),lanes[pos],duration*.7);
   for(const pos of defense.filter(p=>p!==defender))move(opp,pos,clamp(x+d*13),lanes[pos],duration*.7);
   ball.style.transition='left '+Math.round(duration*.5)+'ms ease,top '+Math.round(duration*.5)+'ms ease';
-  ball.style.left=clamp(pass?x+d*13:x-d*3)+'%';ball.style.top=lanes[carrier]+'%';
-  after(()=>{ball.style.left=end+'%';ball.style.top=lanes[carrier]+'%'},duration*.3);
+  ball.style.left=clamp(pass?x+d*13:back+d*2)+'%';ball.style.top=(pass?lanes[carrier]:lanes.RB)+'%';
+  after(()=>{ball.style.left=(e.kind==='incomplete'?clamp(x+d*13):end)+'%';ball.style.top=lanes[carrier]+'%'},duration*.3);
  },duration*.32)
 }
 function build(){sprites.clear();$('battlePlayers').replaceChildren();for(let t=0;t<2;t++)for(const pos of [...offense,...defense]){const id=match.lineups[t][pos];if(!id)continue;const el=document.createElement('div');el.className='battle-mon '+(t?'away':'home');const img=document.createElement('img');img.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png';img.alt='Pokémon '+id;const tag=document.createElement('span');tag.textContent=pos;el.append(img,tag);$('battlePlayers').append(el);sprites.set(t+'-'+pos,el)}}
