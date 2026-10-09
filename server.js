@@ -1,6 +1,7 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const scouting=require('./scouting.js');
 const {seasonAPI}=require('./season.js');
+const {storyAPI}=require('./story.js');
 const {Pool}=require('pg');
 const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false},max:4,connectionTimeoutMillis:10000}):null;
 function dbIssue(e){
@@ -34,7 +35,7 @@ async function leaderboardDB(){
 
 // All original 151 Pokémon are eligible, including legendary and mythical Pokémon.
 const allowedPokemon=id=>Number.isInteger(id)&&id>=1&&id<=151;
-const SALARY_CAP=250;
+const SALARY_CAP=300;
 // Public, deterministic prices based only on canonical Pokémon base stats, not position fit.
 const pokemonSalary=id=>{const p=db[id-1];if(!p?.stats)return null;const total=Object.values(p.stats).reduce((sum,v)=>sum+(Number(v)||0),0);const strength=Math.max(0,Math.min(1,(total-175)/505));return 3+Math.round(24*Math.pow(strength,1.55))};
 const lineupSalary=lineup=>POSITIONS.reduce((sum,pos)=>sum+(pokemonSalary(lineup[pos])||0),0);
@@ -187,6 +188,7 @@ async function accountAPI(req,res,url,b){
  if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
  if(url.pathname==='/api/friends')return friendsAPI(req,res,url,b,user);
  if(['/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))await competitionDB();
+ if(url.pathname==='/api/story'&&(req.method==='GET'||req.method==='POST'))return json(res,200,await storyAPI({pool,user,method:req.method,body:req.method==='GET'?{game:url.searchParams.get('game')}:b,simulate,catalog:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,salary:pokemonSalary(p.id)})),cap:SALARY_CAP,validLineup}));
  if(url.pathname==='/api/season'&&(req.method==='GET'||req.method==='POST')){const data=await seasonAPI({pool,user,method:req.method,body:req.method==='GET'?{gameWeek:url.searchParams.get('week'),gameIndex:url.searchParams.get('game')}:b,simulate,validLineup,ready:db.length===151});return json(res,200,data)}
  if(url.pathname==='/api/profile'&&req.method==='GET'){
   const name=String(url.searchParams.get('username')||user.username).trim().toLowerCase();
@@ -393,7 +395,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,stats:p.stats,salary:pokemonSalary(p.id)}))});
  const b=req.method==='POST'?await body(req):{};
- if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season','/api/friends'].includes(url.pathname))return accountAPI(req,res,url,b);
+ if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season','/api/friends','/api/story'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
  const r=room(b.code||url.searchParams.get('code'));
  if(url.pathname==='/api/join'&&req.method==='POST'){if(r.players[1]||r.phase!=='waiting')return json(res,409,{error:'Room full or already started'});const token=crypto.randomBytes(24).toString('hex');r.players[1]={token,ready:false};r.phase='draft';return json(res,200,{...view(r,1),token})}
