@@ -110,9 +110,9 @@ async function accountAPI(req,res,url,b){
   if(raw){const hash=crypto.createHash('sha256').update(raw.slice(AUTH_COOKIE.length+1)).digest('hex');await pool.query('DELETE FROM gridiron_sessions WHERE token_hash=$1',[hash])}
   res.setHeader('Set-Cookie',authCookie('',0));return json(res,200,{ok:true});
  }
+ if(url.pathname==='/api/league'&&req.method==='GET'){await competitionDB();return json(res,200,{standings:await leagueRows(),rules:'3 points per accepted-match win; accepted matches only'});}
  if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
  if(['/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))await competitionDB();
- if(url.pathname==='/api/league'&&req.method==='GET')return json(res,200,{standings:await leagueRows(),rules:'3 points per accepted-match win; accepted matches only'});
  if(url.pathname==='/api/profile'&&req.method==='GET'){
   const name=String(url.searchParams.get('username')||user.username).trim().toLowerCase();
   const p=await pool.query('SELECT u.id,u.username,t.name AS team_name,t.updated_at FROM gridiron_users u LEFT JOIN gridiron_teams t ON t.user_id=u.id WHERE u.username=$1',[name]);
