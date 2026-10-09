@@ -50,8 +50,21 @@ function update(x){room={...room,...x};$('home').textContent=x.rosters[0].length
 }));
  $('assignments').hidden=x.phase!=='lineups';$('results').hidden=x.phase!=='finished';if(x.phase==='lineups'&&lastPhase!=='lineups')autoAssign();$('ready').disabled=x.ready[x.side];if(x.phase==='finished'&&x.result)results(x.result);lastPhase=x.phase;render();
 }
-function joined(x){room={...x,token:x.token};sessionStorage.setItem('gridiron-room',JSON.stringify({code:x.code,token:x.token}));$('code').value=x.code;$('create').disabled=$('join').disabled=true;$('copy').hidden=false;history.replaceState({},'',location.pathname+'?room='+x.code);update(x);clearInterval(poll);poll=setInterval(refresh,1200);msg('Joined room '+x.code+' as '+(x.side===0?'Forest City':'Volt City'))}
-async function refresh(){if(!room)return;try{update(await api('state?code='+room.code+'&token='+room.token))}catch(e){msg(e.message);clearInterval(poll)}}
+function joined(x){$('leave').hidden=false;room={...x,token:x.token};sessionStorage.setItem('gridiron-room',JSON.stringify({code:x.code,token:x.token}));$('code').value=x.code;$('create').disabled=$('join').disabled=true;$('copy').hidden=false;$('leave').hidden=false;history.replaceState({},'',location.pathname+'?room='+x.code);update(x);clearInterval(poll);poll=setInterval(refresh,1200);msg('Joined room '+x.code+' as '+(x.side===0?'Forest City':'Volt City'))}
+function leaveRoom(notice='You left the room. Enter an invite code to join another game.'){
+ clearInterval(poll);poll=null;replayStop();room=null;assigned={};lastPhase='';replayKey='';
+ sessionStorage.removeItem('gridiron-room');$('create').disabled=false;$('join').disabled=false;
+ $('copy').hidden=true;$('leave').hidden=true;$('assignments').hidden=true;$('results').hidden=true;
+ $('home').textContent='0 / 22';$('away').textContent='0 / 22';$('phase').textContent='LOBBY';
+ $('turn').textContent='Waiting for opponent';$('pickno').textContent='Pick 0 / 44';
+ $('positionNow').textContent='WAITING FOR DRAFT';$('rosters').replaceChildren();
+ history.replaceState({},'',location.pathname+location.search.replace(/([?&])room=[^&]*&?/,'$1').replace(/[?&]$/,''));
+ msg(notice);render();
+}
+async function refresh(){if(!room)return;try{update(await api('state?code='+room.code+'&token='+room.token))}catch(e){
+ if(/Room not found|Invalid room token/i.test(e.message))leaveRoom('Your previous room expired. Create a new room or enter a fresh invite code.');
+ else msg('Connection interrupted: '+e.message+'. Retrying…');
+}}
 async function pick(id){try{update(await api('pick',{code:room.code,token:room.token,id}))}catch(e){msg(e.message);refresh()}}
 function autoAssign(){const picks=(room?.picks||[]).filter(p=>p.side===room.side);assigned=Object.fromEntries(picks.map(p=>[p.position,p.id]));renderPositions()}
 function renderPositions(){const ids=room?.rosters?.[room.side]||[];$('positions').replaceChildren(...POS.map(pos=>{const box=document.createElement('div');box.className='pos';const label=document.createElement('b');label.textContent=pos;const select=document.createElement('select');select.setAttribute('aria-label',pos);ids.forEach(id=>{const opt=document.createElement('option');opt.value=id;opt.textContent=monName(id);select.append(opt)});select.value=assigned[pos]||'';select.onchange=()=>{assigned[pos]=Number(select.value)};box.append(label,select);return box}))}
@@ -156,13 +169,20 @@ function replayNext(){const r=room?.result;if(!r)return;const events=r.events||r
 function results(r){const key=room.code+'-'+r.scores.join('-')+'-'+(r.events?.length||r.log.length);if(replayKey===key)return;replayKey=key;$('winner').textContent='Game Day — Live Replay';replayStart()}
 $('replay').onclick=replayStart;
 $('skip').onclick=()=>{if(!room?.result)return;replayStop();const r=room.result;$('plays').replaceChildren();const events=r.events||[];if(events.length)showEvent(events[events.length-1]);$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores.join(' – ');$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('final').hidden=false;$('totals').hidden=false};
+$('leave').onclick=()=>leaveRoom();
 $('create').onclick=async()=>{try{joined(await api('create',{}))}catch(e){msg(e.message)}};
 $('join').onclick=async()=>{try{joined(await api('join',{code:$('code').value.trim().toUpperCase()}))}catch(e){msg(e.message)}};
 $('copy').onclick=async()=>{const link=location.origin+location.pathname+'?room='+room.code;try{await navigator.clipboard.writeText(link);msg('Invite copied!')}catch{msg('Send: '+link)}};
 $('search').oninput=render;$('type').onchange=render;$('auto').onclick=autoAssign;
 $('ready').onclick=async()=>{try{if(new Set(Object.values(assigned)).size!==22)throw Error('Assign each Pokémon to one unique position');update(await api('ready',{code:room.code,token:room.token,lineup:assigned}));msg('Lineup locked. Waiting for your friend.')}catch(e){msg(e.message)}};
+const invite=new URLSearchParams(location.search).get('room')?.trim().toUpperCase();
 const previous=(()=>{try{return JSON.parse(sessionStorage.getItem('gridiron-room'))}catch{return null}})();
-if(previous){room=previous;$('code').value=previous.code;$('create').disabled=$('join').disabled=true;$('copy').hidden=false;refresh().then(()=>poll=setInterval(refresh,1200))}
-else{const code=new URLSearchParams(location.search).get('room');if(code){$('code').value=code.toUpperCase();msg('Invite detected. Click Join Room.')}}
+if(invite&&(!previous||invite!==previous.code)){
+ sessionStorage.removeItem('gridiron-room');$('code').value=invite;msg('Invite detected. Click Join Room to enter this match.');
+}else if(previous?.code&&previous?.token){
+ room=previous;$('code').value=previous.code;$('create').disabled=$('join').disabled=true;
+ $('copy').hidden=false;$('leave').hidden=false;
+ refresh().then(()=>{if(room&&room.code===previous.code)poll=setInterval(refresh,1200)});
+}else if(invite){$('code').value=invite;msg('Invite detected. Click Join Room.')}
 loadCatalog();
 })();
