@@ -13,3 +13,21 @@
 .account-nav [hidden]{display:none!important}
 .account-nav a:hover,.account-nav button:hover{border-color:#d6fa79}
 @media(max-width:650px){.account-nav{padding:12px 14px 0;gap:7px;flex-wrap:wrap}.account-pill,.account-nav>a:not(.account-pill),.account-nav button{font-size:11px;padding:9px 11px}.landing{padding-top:20px}}
+
+/* Unified site header and profile dropdown */
+.account-nav{max-width:1200px;min-height:78px;padding:15px 24px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:22px}
+.top-brand{color:#f6ffe9;text-decoration:none;font-family:'Barlow Condensed',Impact,sans-serif;font-weight:900;font-size:25px;letter-spacing:1px;white-space:nowrap}.top-brand strong{color:#d6fa79}
+.top-links{display:flex;align-items:center;gap:7px}.top-links a{padding:10px 13px;color:#c7d9d5;text-decoration:none;font-size:13px;font-weight:700;border-radius:10px}.top-links a:hover{background:#ffffff12;color:#d6fa79}
+.account-area{position:relative;flex-shrink:0}.account-nav [hidden]{display:none!important}
+.account-nav .account-pill{display:flex;align-items:center;gap:11px;text-decoration:none;border:1px solid #68887d;border-radius:14px;background:#18353a;color:#fff;padding:9px 14px;font:700 13px Inter,system-ui,sans-serif;cursor:pointer;min-height:50px}
+.account-nav .account-pill:hover,.account-nav .account-pill:focus-visible{border-color:#d6fa79;outline-offset:3px}
+.account-nav .account-pill.signed-in{background:#254537;border-color:#a5c96c}
+.account-nav .account-avatar{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:#c9f06a;color:#173d2d;font-size:17px;font-weight:900}
+.profile-identity{display:flex;flex-direction:column;align-items:flex-start;gap:3px}.profile-identity small{color:#c1d8bd;font-size:10px;font-weight:600}.online-dot{display:inline-block;width:7px;height:7px;background:#c9f06a;border-radius:50%;margin-right:3px}
+.profile-dropdown{position:absolute;z-index:20;right:0;top:calc(100% + 9px);width:235px;padding:9px;background:#132d31;border:1px solid #597a6b;border-radius:15px;box-shadow:0 20px 55px #000b;text-align:left}
+.profile-dropdown a,.profile-dropdown button{display:block;width:100%;text-align:left;padding:12px;border:0;border-radius:8px;background:transparent;color:#e9f6e5;font:700 13px Inter,system-ui,sans-serif;text-decoration:none;cursor:pointer}.profile-dropdown a:hover,.profile-dropdown button:hover{background:#2d4f42;color:#d6fa79}
+.dropdown-divider{border-top:1px solid #ffffff24;margin:5px 0}
+.entry-status{color:#c6dcd2;font-size:14px;margin:-20px auto 28px;min-height:21px}
+.modes{grid-template-columns:repeat(3,minmax(0,1fr))}.mode{min-height:340px;padding:27px}.mode>strong{font-size:clamp(31px,3.8vw,47px)}.entry-footer{margin:28px 0 0;color:#acc9bf}.entry-footer a{color:#d6fa79;text-decoration:none;font-size:13px;font-weight:750}
+@media(max-width:850px){.top-links{display:none}.modes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.account-nav{padding:12px 15px;min-height:68px}.top-brand{font-size:21px}.account-nav .account-pill{padding:7px 9px;font-size:11px;min-height:44px}.account-nav .account-avatar{width:29px;height:29px}.modes{grid-template-columns:1fr}.entry-status{margin-top:-12px}.profile-dropdown{width:210px}}
