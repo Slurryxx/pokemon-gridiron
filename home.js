@@ -1,1 +1,1 @@
-(()=>{'use strict';const status=document.getElementById('entryStatus'),actions=document.getElementById('entryActions');status.textContent='Enter your username to start playing.';actions.hidden=false;})();
+(()=>{'use strict';const status=document.getElementById('entryStatus');status.textContent='Opening username entry…';fetch('/api/auth/logout',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{}).finally(()=>location.replace('/account.html'));})();
