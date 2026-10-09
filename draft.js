@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),POS=['QB','RB','WR1','WR2','WR3','TE','LT','LG','C','RG','RT','DE1','DE2','DT1','DT2','LB1','LB2','LB3','CB1','CB2','FS','SS'];
-let catalog=[],room=null,assigned={},poll=null,dbReady=false,lastPhase='';
+let catalog=[],room=null,assigned={},poll=null,dbReady=false,lastPhase='',replayTimer=null,replayKey='',replayIndex=0;
 const msg=s=>$('message').textContent=s;
 async function api(endpoint,data){const r=await fetch('/api/'+endpoint,data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:{});const j=await r.json();if(!r.ok)throw Error(j.error||'Request failed');return j}
 function monName(id){return catalog.find(p=>p.id===id)?.name||'#'+id}
@@ -26,7 +26,13 @@ async function refresh(){if(!room)return;try{update(await api('state?code='+room
 async function pick(id){try{update(await api('pick',{code:room.code,token:room.token,id}))}catch(e){msg(e.message);refresh()}}
 function autoAssign(){const picks=(room?.picks||[]).filter(p=>p.side===room.side);assigned=Object.fromEntries(picks.map(p=>[p.position,p.id]));renderPositions()}
 function renderPositions(){const ids=room?.rosters?.[room.side]||[];$('positions').replaceChildren(...POS.map(pos=>{const box=document.createElement('div');box.className='pos';const label=document.createElement('b');label.textContent=pos;const select=document.createElement('select');select.setAttribute('aria-label',pos);ids.forEach(id=>{const opt=document.createElement('option');opt.value=id;opt.textContent=monName(id);select.append(opt)});select.value=assigned[pos]||'';select.onchange=()=>{assigned[pos]=Number(select.value)};box.append(label,select);return box}))}
-function results(r){$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores[0]+' – '+r.scores[1];$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('plays').replaceChildren(...r.log.map(s=>{const p=document.createElement('p');p.textContent=s;return p}))}
+function showEvent(e){$('livehome').textContent=e.scores[0];$('liveaway').textContent=e.scores[1];$('livequarter').textContent=e.quarter===5?'FINAL / OT':'Q'+e.quarter;$('livecall').textContent=e.text;const p=document.createElement('p');p.textContent=e.text;p.className='event-'+e.kind;$('plays').prepend(p)}
+function replayStop(){if(replayTimer)clearTimeout(replayTimer);replayTimer=null}
+function replayStart(){if(!room?.result)return;replayStop();replayIndex=0;$('plays').replaceChildren();$('final').hidden=true;$('totals').hidden=true;$('livehome').textContent='0';$('liveaway').textContent='0';$('livequarter').textContent='KICKOFF';$('livecall').textContent='Teams take the field!';replayNext()}
+function replayNext(){const r=room?.result;if(!r)return;const events=r.events||r.log.map(text=>({text,kind:'play',quarter:1,scores:r.scores}));if(replayIndex>=events.length){$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores.join(' – ');$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('final').hidden=false;$('totals').hidden=false;return}const e=events[replayIndex++];showEvent(e);replayTimer=setTimeout(replayNext,Number($('speed').value)*(e.kind==='touchdown'||e.kind==='turnover'?2:1))}
+function results(r){const key=room.code+'-'+r.scores.join('-')+'-'+(r.events?.length||r.log.length);if(replayKey===key)return;replayKey=key;$('winner').textContent='Game Day — Live Replay';replayStart()}
+$('replay').onclick=replayStart;
+$('skip').onclick=()=>{if(!room?.result)return;replayStop();const r=room.result;$('plays').replaceChildren();const events=r.events||[];if(events.length)showEvent(events[events.length-1]);$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores.join(' – ');$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('final').hidden=false;$('totals').hidden=false};
 $('create').onclick=async()=>{try{joined(await api('create',{}))}catch(e){msg(e.message)}};
 $('join').onclick=async()=>{try{joined(await api('join',{code:$('code').value.trim().toUpperCase()}))}catch(e){msg(e.message)}};
 $('copy').onclick=async()=>{const link=location.origin+location.pathname+'?room='+room.code;try{await navigator.clipboard.writeText(link);msg('Invite copied!')}catch{msg('Send: '+link)}};
