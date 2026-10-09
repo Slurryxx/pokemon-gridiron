@@ -69,3 +69,14 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
 @media(max-width:1080px){.builder-layout{grid-template-columns:1fr}.builder-field{min-height:600px;aspect-ratio:1.5}.pokemon-choices{grid-template-columns:repeat(4,minmax(0,1fr));max-height:520px}}
 @media(max-width:700px){.builder-hero{padding:23px;align-items:flex-start}.hero-number{display:none}.builder-actions{align-items:stretch}.builder-actions>div{min-width:90px}.builder-actions #saveDreamTeam{flex:1 1 100%}.builder-layout>.panel{padding:13px}.builder-field{min-height:490px;aspect-ratio:1}.builder-field .formation-sprite{height:48px}.pokemon-choices{grid-template-columns:repeat(3,minmax(0,1fr))}.pokemon-choice{min-height:116px}.pokemon-choice img{width:65px;height:65px}.pokemon-choice strong{font-size:11px}}
 @media(max-width:420px){.builder-field{min-height:425px;aspect-ratio:.95}.builder-field .formation-sprite{height:38px}.builder-field .formation-nameplate small:last-child{display:none}.picker-controls{flex-wrap:wrap}.picker-controls select{max-width:none;width:100%}.pokemon-choices{gap:6px}.pokemon-choice{padding:5px 2px;min-height:105px}.pokemon-choice img{width:56px;height:56px}}
+
+/* Live salary cap: high-visibility budget meter and Pokémon price tags */
+.budget-panel{position:sticky;top:0;z-index:20;border:2px solid #b7d56f;box-shadow:0 10px 30px #07170f77}
+.budget-top{align-items:center}
+.budget-top strong:last-child{font-size:clamp(24px,3vw,36px);font-variant-numeric:tabular-nums;color:#e1ffa6}
+.budget-track{height:22px;margin:14px 0 9px;background:#0a1a13;border:2px solid #79966b;border-radius:16px}
+.budget-fill{background:linear-gradient(90deg,#6ac878,#c9f06a,#f0d76b);transition:width .22s ease}
+.budget-details{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:3px 0 10px;color:#e5f7da;font-size:14px;font-weight:900;font-variant-numeric:tabular-nums}
+.pokemon-choice small{font-size:15px;font-weight:950;color:#173d20;background:#c7f091;padding:5px 12px;border-radius:9px}
+.builder-field .formation-nameplate small:last-child{font-weight:900;color:#edffac}
+@media(max-width:700px){.budget-panel{top:0;padding:13px 15px}.budget-top strong:last-child{font-size:25px}.budget-details{font-size:12px}}
