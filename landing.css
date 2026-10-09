@@ -34,3 +34,5 @@
 
 /* Friends Season is a first-class homepage game mode */
 .mode.season{background:radial-gradient(circle at 90% 10%,#9cd54a40,transparent 45%),linear-gradient(135deg,#305e3f,#173d3c 75%);border-color:#a5c973}.mode.season .mode-tag{color:#d6fa79}.mode.season .mode-icon{filter:drop-shadow(0 0 12px #c5f46a77)}.mode.season .mode-action{color:#e4ff9e}.mode.season:hover{border-color:#d6fa79;box-shadow:0 20px 60px #b7ed4a22}
+
+.mode.showdown{background:radial-gradient(circle at 85% 12%,#b5e76355,transparent 45%),linear-gradient(130deg,#355d35,#193d39 80%);border-color:#a4d56c}.mode.showdown .mode-tag,.mode.showdown .mode-action{color:#d6fa79}.mode.showdown:hover{border-color:#e5ff9e;box-shadow:0 20px 50px #a5e16a22}
