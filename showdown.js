@@ -25,7 +25,7 @@ function rng(game,salt){const h=crypto.createHash('sha256').update(game.id+':'+g
 function next(game){game.snap++;game.quarter=Math.min(4,Math.floor(game.snap/6)+1);if(game.snap>=24){game.finished=true;game.winner=game.score[0]===game.score[1]?'tie':game.score[0]>game.score[1]?'player':'ai'}game.updatedAt=Date.now()}
 function turn(game,body,db){
  if(game.finished)throw Error('Match finished. Start another challenge.');
- const play=String(body.play||''),position=String(body.position||'');if(!PLAYS[play])throw Error('Choose a valid football play.');
+ const play=String(body.play||''),position=String(body.position||'');if(!(game.turn==='offense'?PLAYS[play]:DEFENSE[play]))throw Error('Choose a valid play call.');
  const available=options(game,db),selected=available.find(p=>p.position===position);
  if(!selected)throw Error('Choose a Pokémon on the field to use its ability.');
  if(selected.cooldown>0)throw Error(selected.name+' needs '+selected.cooldown+' more snap(s) before using '+selected.move+'.');
