@@ -31,8 +31,12 @@ async function leaderboardDB(){
 }
 
 
-const BANNED_POKEMON=new Set([144,145,146,150,151]);
-const allowedPokemon=id=>Number.isInteger(id)&&id>=1&&id<=151&&!BANNED_POKEMON.has(id);
+// All original 151 Pokémon are eligible, including legendary and mythical Pokémon.
+const allowedPokemon=id=>Number.isInteger(id)&&id>=1&&id<=151;
+const SALARY_CAP=205;
+// Public, deterministic prices based only on canonical Pokémon base stats, not position fit.
+const pokemonSalary=id=>{const p=db[id-1];if(!p?.stats)return null;const total=Object.values(p.stats).reduce((sum,v)=>sum+(Number(v)||0),0);return 3+Math.round(total/65)};
+const lineupSalary=lineup=>POSITIONS.reduce((sum,pos)=>sum+(pokemonSalary(lineup[pos])||0),0);
 const AUTH_COOKIE='gridiron_session';
 const hashPassword=(password,salt)=>crypto.scryptSync(password,salt,64).toString('hex');
 const authCookie=(token,maxAge)=>AUTH_COOKIE+'='+token+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age='+maxAge;
@@ -80,8 +84,11 @@ const lineupProblem=lineup=>{
  const missing=POSITIONS.filter(p=>!Number.isInteger(lineup[p]));
  if(missing.length)return 'Choose a Pokémon for every position. Missing: '+missing.join(', ')+'.';
  const banned=POSITIONS.filter(p=>!allowedPokemon(lineup[p]));
- if(banned.length)return 'Legendary or unavailable Pokémon are not allowed. Replace: '+banned.join(', ')+'.';
+ if(banned.length)return 'Unavailable Pokémon in: '+banned.join(', ')+'.';
  if(new Set(ids).size!==22)return 'Each of the 22 positions must have a different Pokémon.';
+ if(db.length!==151)return 'Pokémon pricing is still loading. Try again shortly.';
+ const total=lineupSalary(lineup);
+ if(total>SALARY_CAP)return 'Team salary '+total+' exceeds the '+SALARY_CAP+' credit cap. Swap in lower-cost Pokémon.';
  return null;
 };
 const validLineup=lineup=>lineupProblem(lineup)===null;
@@ -328,7 +335,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/best-lineup'&&req.method==='GET')return json(res,403,{error:'Optimal lineup hints are disabled for competitive play.'});
  if(url.pathname==='/api/lineup-score'&&req.method==='POST')return json(res,403,{error:'Scouting grades are hidden during competitive play.'});
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
- if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg}))});
+ if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,salary:pokemonSalary(p.id)}))});
  const b=req.method==='POST'?await body(req):{};
  if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
