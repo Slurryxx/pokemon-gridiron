@@ -35,3 +35,5 @@ main.roster-shell{display:block!important;width:min(1440px,calc(100% - 36px));ma
 #salaryRemaining{display:block;font-size:13px;font-weight:800;color:#3b6543}
 .roster-card .roster-position{color:#dfff98!important;font-size:12px;font-weight:950}
 .roster-card .roster-price{color:#d5ffb4!important;font-size:11px;font-weight:900;margin-top:auto}
+
+.team-share-box{padding:22px;margin:18px 0 25px;border:1px solid #7caa72;border-radius:15px;background:linear-gradient(115deg,#244a3d,#123138)}.team-share-box>strong{display:block;font-size:17px;color:#d6fa79}.team-share-box p{color:#c6ddcc;line-height:1.5}.team-share-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.team-share-actions button,.team-share-actions a{display:inline-block;border:1px solid #7b997f;border-radius:9px;padding:12px 15px;background:#d6fa79;color:#143d2a;font-size:13px;font-weight:900;cursor:pointer;text-decoration:none}.team-share-actions a{background:#1a3d37;color:#e2f8dd}.team-share-box #shareStatus{font-size:12px;margin-bottom:0}
