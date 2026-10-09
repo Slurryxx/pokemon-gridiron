@@ -114,12 +114,12 @@ function fieldUpdate(e){
   const px=pos.startsWith('CB')||pos==='FS'||pos==='SS'?defBack:pos.startsWith('LB')?defFront+direction*5:defFront;
   setPlayer(opp,pos,px,lane[pos],0)
  }
- const ball=$('field-ball');ball.style.transition='none';ball.style.left=fieldClamp(back)+'%';ball.style.top='50%';ball.style.opacity=playing?'1':'.35';
+ const ball=$('field-ball');ball.style.transition='none';ball.style.left=fieldClamp(back)+'%';ball.style.top='50%';ball.style.opacity=playing?'1':'.35';ball.style.filter='drop-shadow(0 0 5px #fff)';
  const flash=$('field-flash');flash.textContent=({touchdown:'TOUCHDOWN!',turnover:'TURNOVER!',fieldgoal:'FIELD GOAL!',bigplay:'BIG PLAY!'})[e.kind]||'';
  flash.classList.remove('active');void flash.offsetWidth;if(flash.textContent)flash.classList.add('active');
  if(!playing)return;
  const speed=Math.max(900,Number($('speed').value)||3000),total=Math.max(400,speed*.85);
- const carrierPos=offenseSlots.find(p=>starter(t,p)===actors.carrier)||(pass?'WR1':'RB');
+ const carrierPos=actors.carrierPosition||offenseSlots.find(p=>starter(t,p)===actors.carrier)||(pass?'WR1':'RB');
  const defenderPos=defenseSlots.find(p=>starter(opp,p)===actors.defense)||'LB2';
  const finish=fieldClamp(x),start=fieldClamp(base);
  const targetY=lane[carrierPos]||50;
@@ -143,10 +143,10 @@ function fieldUpdate(e){
   for(const pos of offenseSlots.filter(p=>p!==carrierPos&&p!=='QB'))setPlayer(t,pos,fieldClamp(start+direction*(pos.startsWith('WR')?17:8)),lane[pos],total*.7);
   for(const pos of defenseSlots.filter(p=>p!==defenderPos))setPlayer(opp,pos,fieldClamp(start+direction*(pos.startsWith('CB')?19:11)),lane[pos],total*.72);
   ball.style.transition='left '+Math.round(total*.4)+'ms ease-in-out,top '+Math.round(total*.4)+'ms ease-in-out';
-  ball.style.left=carrierX+'%';ball.style.top=targetY+'%';
+  ball.style.left=(pass?carrierX:fieldClamp(back+direction*2))+'%';ball.style.top=(pass?targetY:lane.RB)+'%';
   later(()=>{
    ball.style.transition='left '+Math.round(total*.45)+'ms ease-out,top '+Math.round(total*.45)+'ms ease-out';
-   ball.style.left=finish+'%';ball.style.top=targetY+'%';
+   ball.style.left=(e.kind==='incomplete'?carrierX:finish)+'%';ball.style.top=targetY+'%';
    $('scrimmage').style.left=finish+'%';
   },total*.38)
  },total*.34)
