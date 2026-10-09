@@ -37,7 +37,7 @@ function fit(p,pos){
  const w=pos==='QB'?[2,1,1,1,3,2]:pos==='RB'?[2,3,1,3,0,0]:pos.startsWith('WR')?[1,2,0,4,2,0]:pos==='TE'?[3,2,3,1,0,1]:['LT','LG','C','RG','RT'].includes(pos)?[3,2,4,0,0,1]:pos.startsWith('DE')?[1,4,2,2,0,1]:pos.startsWith('DT')?[4,3,4,0,0,1]:pos.startsWith('LB')?[2,2,3,3,0,1]:pos.startsWith('CB')?[1,1,3,4,0,2]:[1,1,3,3,0,3];
  return ['hp','attack','defense','speed','special-attack','special-defense'].reduce((n,k,i)=>n+w[i]*stat(p,k),0);
 }
-function choose(p){lineup[selected]=p.id;selected=POS.find(pos=>!lineup[pos])||selected;persist();render();score()}
+function choose(p){lineup[selected]=p.id;selected=POS.find(pos=>!lineup[pos])||selected;persist();render();score();message('Added '+p.name+' to your lineup. Choose a Pokémon for '+selected+' next.');}
 function recommendations(){
  const target=$('recommendedChoices');target.replaceChildren();
  $('recommendationTitle').textContent='Quick picks for '+selected;
@@ -66,6 +66,7 @@ function renderChoices(){
  const sort=$('priceSort').value;const list=catalog.filter(p=>p.name.includes(search)).sort((a,b)=>sort==='low'?a.salary-b.salary||a.id-b.id:sort==='high'?b.salary-a.salary||a.id-b.id:sort==='name'?a.name.localeCompare(b.name):a.id-b.id);
  $('pickerGuide').textContent='Editing '+selected+(lineup[selected]?' · '+name(lineup[selected])+' currently selected':' · Empty position')+' · '+list.length+' Pokémon found';
  const remove=$('removePlayer');remove.hidden=!lineup[selected];remove.disabled=!lineup[selected];remove.textContent=lineup[selected]?'✕ Remove '+name(lineup[selected])+' from '+selected:'Remove Player';
+ if(!list.length){const empty=document.createElement('p');empty.className='picker-empty';empty.textContent=catalog.length?'No Pokémon match your search. Try another name.':'Loading available Pokémon…';$('pokemonChoices').replaceChildren(empty);return}
  $('pokemonChoices').replaceChildren(...list.map(p=>{
   const taken=used.has(p.id)&&lineup[selected]!==p.id;
   const tooExpensive=spent()-salary(lineup[selected])+p.salary>salaryCap;
