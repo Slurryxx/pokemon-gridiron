@@ -13,4 +13,6 @@ jobs:
           node-version: '22'
       - run: node --check server.js
       - run: node --check draft.js
+      - run: node --check builder.js
+      - run: node --check scouting.js
       - run: node tests/simulation.test.js
