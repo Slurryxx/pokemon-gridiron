@@ -171,3 +171,5 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
 @media(max-width:1080px){.clean-field{max-width:750px;margin-inline:auto;aspect-ratio:1.08;min-height:680px}}
 @media(max-width:700px){.clean-field{min-height:610px;aspect-ratio:auto}.field-player{width:48px;min-height:78px;padding:3px 1px}.field-player-sprite{width:40px;height:36px}.field-player-name{font-size:8px}.field-player-role,.field-player-price{font-size:9px}.clean-field-label{font-size:10px}}
 @media(max-width:430px){.clean-field{min-height:590px}.field-player{width:42px;min-height:72px}.field-player-sprite{width:35px;height:33px}.field-player-name{font-size:7px}.field-player-role,.field-player-price{font-size:8px}}
+
+@media(max-width:600px){.clean-field{min-height:560px}.field-player{touch-action:manipulation}.field-player-name{overflow:hidden;text-overflow:ellipsis}button,input,select{max-width:100%}}
