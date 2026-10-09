@@ -21,8 +21,8 @@ form.addEventListener('submit',async event=>{
  try{
   await api('/api/auth/guest',{username});
   const result=await api('/api/my-team');
-  feedback(result.team?'Welcome back! Opening your saved Dream Team…':'Welcome! Opening your new Dream Team Builder…');
-  location.replace(result.team?'/my-team.html':'/builder.html');
+  feedback(result.team?'Welcome back! Opening game modes…':'Welcome! Choose a game mode to get started.');
+  const next=new URLSearchParams(location.search).get('next');const destination=next&&next.startsWith('/')&&!next.startsWith('//')&&!next.includes('\\')?next:'/';location.replace(destination);
  }catch(error){feedback(error.message,true);busy=false;button.disabled=false;button.textContent='Continue →'}
 });
 input.addEventListener('input',()=>{if(!busy)feedback('Enter a username to get started.')});
