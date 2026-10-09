@@ -109,6 +109,18 @@ async function api(req,res,url){try{
  const gradeLineup=lineup=>{if(!lineup||typeof lineup!=='object')throw Error('Lineup required');const ids=POSITIONS.map(p=>Number(lineup[p]));if(ids.some(id=>!Number.isInteger(id)||id<1||id>151)||new Set(ids).size!==22)throw Error('Select 22 different Pokémon');const slots=POSITIONS.map((position,i)=>({position,id:ids[i],score:fitScore(ids[i],position),scouting:scouting(ids[i])}));const total=slots.reduce((n,x)=>n+x.score,0),overall=Math.round(total/22);return {overall,total,offense:Math.round(slots.slice(0,11).reduce((n,x)=>n+x.score,0)/11),defense:Math.round(slots.slice(11).reduce((n,x)=>n+x.score,0)/11),slots,unscouted:slots.filter(x=>!x.scouting).map(x=>x.id),method:'CSV model grade multiplied by position-fit factor; not an actual win probability'}};
  // Maximum-weight assignment: one unique Pokémon per slot, including repeated position categories.
  function bestLineup(){const n=POSITIONS.length,m=150,u=Array(n+1).fill(0),v=Array(m+1).fill(0),p=Array(m+1).fill(0),way=Array(m+1).fill(0);for(let i=1;i<=n;i++){p[0]=i;let j0=0;const minv=Array(m+1).fill(Infinity),used=Array(m+1).fill(false);do{used[j0]=true;const i0=p[j0];let delta=Infinity,j1=0;for(let j=1;j<=m;j++)if(!used[j]){const cur=-fitScore(j,POSITIONS[i0-1])-u[i0]-v[j];if(cur<minv[j]){minv[j]=cur;way[j]=j0}if(minv[j]<delta){delta=minv[j];j1=j}}for(let j=0;j<=m;j++){if(used[j]){u[p[j]]+=delta;v[j]-=delta}else minv[j]-=delta}j0=j1}while(p[j0]!==0);do{const j1=way[j0];p[j0]=p[j1];j0=j1}while(j0!==0)}const result={};for(let j=1;j<=m;j++)if(p[j])result[POSITIONS[p[j]-1]]=j;return result}
+ const leaderboardPath=path.join(__dirname,'leaderboard.json');
+ const loadBoard=()=>{try{return JSON.parse(fs.readFileSync(leaderboardPath,'utf8'))}catch{return []}};
+ if(url.pathname==='/api/leaderboard'&&req.method==='GET')return json(res,200,{entries:loadBoard().sort((a,b)=>b.score-a.score||a.created-b.created).slice(0,50),note:'Prototype leaderboard is stored on the app server and may reset when hosting restarts.'});
+ if(url.pathname==='/api/leaderboard'&&req.method==='POST'){
+  const b=await body(req),name=String(b.name||'').trim().replace(/[<>]/g,'').slice(0,28);
+  if(name.length<2)throw Error('Enter a team name (2–28 characters)');
+  const result=gradeLineup(b.lineup),entries=loadBoard(),created=Date.now();
+  entries.push({name,score:result.overall,offense:result.offense,defense:result.defense,created,lineup:POSITIONS.map(p=>b.lineup[p])});
+  entries.sort((a,b)=>b.score-a.score||a.created-b.created);
+  try{fs.writeFileSync(leaderboardPath,JSON.stringify(entries.slice(0,100)))}catch(e){return json(res,503,{error:'Leaderboard storage is unavailable on this host'})}
+  return json(res,200,{rank:entries.findIndex(e=>e.created===created)+1,score:result.overall});
+ }
  if(url.pathname==='/api/scouting'&&req.method==='GET')return json(res,200,{positions:POSITIONS,records:Array.from({length:151},(_,i)=>({id:i+1,...(scouting(i+1)||{grade:null,position:null})})),note:'150 graded Pokémon in uploaded CSV; Mew (#151) was not included.'});
  if(url.pathname==='/api/best-lineup'&&req.method==='GET'){const lineup=bestLineup();return json(res,200,{lineup,...gradeLineup(lineup)})}
  if(url.pathname==='/api/lineup-score'&&req.method==='POST'){const request=await body(req);return json(res,200,gradeLineup(request.lineup))}
