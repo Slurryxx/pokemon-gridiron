@@ -16,8 +16,10 @@ for(let i=0;i<15;i++){
  assert.ok(r.events.every(e=>e.spot>=0&&e.spot<=100));
  assert.ok(r.events.every(e=>e.possession===0||e.possession===1));
  assert.ok(r.events.some(e=>e.actors&&e.actors.carrier));
- assert.equal(r.engineVersion,2);
+ assert.equal(r.engineVersion,3);
  assert.ok(r.events.some(e=>e.actors?.matchup?.length===2));
+ assert.ok(r.events.some(e=>e.kind==='bigplay'||e.kind==='touchdown'));
+ assert.ok(r.events.filter(e=>e.kind==='bigplay'||e.kind==='touchdown').every(e=>e.actors?.move));
  assert.ok(r.events.every(e=>!e.actors?.carrier||(e.actors.carrier>=1&&e.actors.carrier<=151)));
  assert.equal(r.winner,r.scores[0]>r.scores[1]?0:1);
 }
