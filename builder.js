@@ -113,7 +113,7 @@ $('saveDreamTeam').onclick=async()=>{
   const teamName=$('teamName').value.trim()||'My Dream Team';
   await accountRequest('/api/my-team','POST',{name:teamName,lineup});
   try{sessionStorage.removeItem('gridiron_draft_lineup_'+activeUsername)}catch{}
-  message('✓ Team saved successfully! Opening your roster…');location.assign('/my-team.html');
+  const seasonCode=new URLSearchParams(location.search).get('seasonCode');message('✓ Team saved successfully!');location.assign(seasonCode&&/^[A-Fa-f0-9]{10}$/.test(seasonCode)?'/season.html?code='+encodeURIComponent(seasonCode):'/my-team.html');
  }catch(e){message('Could not save: '+e.message);if(/Log in|unauthorized|session/i.test(e.message)){message('Your session expired. Re-enter your username, then return to the builder to save your edits.');}}
  finally{saving=false;$('saveDreamTeam').textContent='💾 Save My Team';budget()}
 };
