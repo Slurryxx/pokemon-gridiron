@@ -58,21 +58,19 @@ async function newSession(res,userId){
 }
 async function accountAPI(req,res,url,b){
  await accountsDB();
- if(url.pathname==='/api/auth/register'&&req.method==='POST'){
-  const username=String(b.username||'').trim(),password=String(b.password||'');
-  if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return json(res,400,{error:'Username must be 3–24 letters, numbers or underscores.'});
-  if(password.length<10||password.length>128)return json(res,400,{error:'Password must be 10–128 characters.'});
-  const salt=crypto.randomBytes(16).toString('hex');
-  let user;try{const r=await pool.query('INSERT INTO gridiron_users(username,password_salt,password_hash) VALUES($1,$2,$3) RETURNING id,username',[username.toLowerCase(),salt,hashPassword(password,salt)]);user=r.rows[0]}catch(e){if(e.code==='23505')return json(res,409,{error:'Username already taken.'});throw e}
-  await newSession(res,user.id);return json(res,200,{user:{username:user.username}});
- }
- if(url.pathname==='/api/auth/login'&&req.method==='POST'){
-  const username=String(b.username||'').trim().toLowerCase(),password=String(b.password||'');
-  const r=await pool.query('SELECT * FROM gridiron_users WHERE username=$1',[username]);const user=r.rows[0];
-  const salt=user?.password_salt||'00000000000000000000000000000000';
-  const expected=Buffer.from(user?.password_hash||'0'.repeat(128),'hex'),actual=Buffer.from(hashPassword(password,salt),'hex');
-  if(!user||!crypto.timingSafeEqual(expected,actual))return json(res,401,{error:'Invalid username or password.'});
-  await newSession(res,user.id);return json(res,200,{user:{username:user.username}});
+ // Username-only guest identity: intentionally no email or password.
+ // Existing password-protected accounts are not claimable through this flow.
+ if((url.pathname==='/api/auth/guest'||url.pathname==='/api/auth/register'||url.pathname==='/api/auth/login')&&req.method==='POST'){
+  const username=String(b.username||'').trim().toLowerCase();
+  if(!/^[a-z0-9_]{3,24}$/.test(username))return json(res,400,{error:'Use 3–24 letters, numbers or underscores.'});
+  let r=await pool.query('SELECT id,password_salt FROM gridiron_users WHERE username=$1',[username]);
+  let user=r.rows[0];
+  if(user&&user.password_salt!=='guest')return json(res,409,{error:'That username belongs to an older protected account. Choose another username.'});
+  if(!user){
+   try{r=await pool.query("INSERT INTO gridiron_users(username,password_salt,password_hash) VALUES($1,'guest','guest') RETURNING id",[username]);user=r.rows[0]}
+   catch(e){if(e.code!=='23505')throw e;r=await pool.query('SELECT id,password_salt FROM gridiron_users WHERE username=$1',[username]);user=r.rows[0];if(user?.password_salt!=='guest')return json(res,409,{error:'That username belongs to an older protected account. Choose another username.'})}
+  }
+  await newSession(res,user.id);return json(res,200,{user:{username}});
  }
  const user=await loggedIn(req);
  if(url.pathname==='/api/auth/me'&&req.method==='GET')return json(res,200,{user:user?{username:user.username}:null});
