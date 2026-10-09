@@ -307,7 +307,7 @@ function simulate(players){
 async function api(req,res,url){try{
 
  const category=pos=>pos==='QB'?'QB':pos==='RB'?'RB':pos.startsWith('WR')?'WR':pos==='TE'?'TE':['LT','LG','C','RG','RT'].includes(pos)?'OL':pos.startsWith('DE')?'EDGE':pos.startsWith('DT')?'IDL':pos.startsWith('LB')?'EDGE':pos.startsWith('CB')?'CB':'S';
- const fitScore=(id,pos)=>{const sc=scouting(id);if(!sc)return 0;const target=category(pos);const fit=sc.position===target?1:((sc.position==='CB'&&target==='S')||(sc.position==='S'&&target==='CB'))?.85:((sc.position==='EDGE'&&pos.startsWith('LB'))?.75:.65);return Math.round(sc.grade*fit)};
+ const fitScore=(id,pos)=>{if(!allowedPokemon(id))return 0;const sc=scouting(id);if(!sc)return 0;const target=category(pos);const fit=sc.position===target?1:((sc.position==='CB'&&target==='S')||(sc.position==='S'&&target==='CB'))?.85:((sc.position==='EDGE'&&pos.startsWith('LB'))?.75:.65);return Math.round(sc.grade*fit)};
  const gradeLineup=lineup=>{if(!lineup||typeof lineup!=='object')throw Error('Lineup required');const ids=POSITIONS.map(p=>Number(lineup[p]));if(ids.some(id=>!Number.isInteger(id)||!allowedPokemon(id))||new Set(ids).size!==22)throw Error('Select 22 different Pokémon');const slots=POSITIONS.map((position,i)=>({position,id:ids[i],score:fitScore(ids[i],position),scouting:scouting(ids[i])}));const total=slots.reduce((n,x)=>n+x.score,0),overall=Math.round(total/22);return {overall,total,offense:Math.round(slots.slice(0,11).reduce((n,x)=>n+x.score,0)/11),defense:Math.round(slots.slice(11).reduce((n,x)=>n+x.score,0)/11),slots,unscouted:slots.filter(x=>!x.scouting).map(x=>x.id),method:'CSV model grade multiplied by position-fit factor; not an actual win probability'}};
  // Maximum-weight assignment: one unique Pokémon per slot, including repeated position categories.
  function bestLineup(){const n=POSITIONS.length,m=150,u=Array(n+1).fill(0),v=Array(m+1).fill(0),p=Array(m+1).fill(0),way=Array(m+1).fill(0);for(let i=1;i<=n;i++){p[0]=i;let j0=0;const minv=Array(m+1).fill(Infinity),used=Array(m+1).fill(false);do{used[j0]=true;const i0=p[j0];let delta=Infinity,j1=0;for(let j=1;j<=m;j++)if(!used[j]){const cur=-fitScore(j,POSITIONS[i0-1])-u[i0]-v[j];if(cur<minv[j]){minv[j]=cur;way[j]=j0}if(minv[j]<delta){delta=minv[j];j1=j}}for(let j=0;j<=m;j++){if(used[j]){u[p[j]]+=delta;v[j]-=delta}else minv[j]-=delta}j0=j1}while(p[j0]!==0);do{const j1=way[j0];p[j0]=p[j1];j0=j1}while(j0!==0)}const result={};for(let j=1;j<=m;j++)if(p[j])result[POSITIONS[p[j]-1]]=j;return result}
@@ -329,8 +329,8 @@ async function api(req,res,url){try{
    return json(res,200,{rank:rank.rows[0].rank,score:result.overall});
   }catch(e){console.error('Leaderboard save failed:',e.message);return json(res,503,{error:dbIssue(e)})}
  }
- if(url.pathname==='/api/scouting'&&req.method==='GET')return json(res,200,{positions:POSITIONS,records:Array.from({length:151},(_,i)=>({id:i+1,...(scouting(i+1)||{grade:null,position:null})})),note:'150 graded Pokémon in uploaded CSV; Mew (#151) was not included.'});
- if(url.pathname==='/api/best-lineup'&&req.method==='GET'){const lineup=bestLineup();return json(res,200,{lineup,...gradeLineup(lineup)})}
+ if(url.pathname==='/api/scouting'&&req.method==='GET')return json(res,403,{error:'Scouting grades are hidden for competitive play.'});
+ if(url.pathname==='/api/best-lineup'&&req.method==='GET')return json(res,403,{error:'Optimal lineup hints are disabled for competitive play.'});
  if(url.pathname==='/api/lineup-score'&&req.method==='POST'){const request=await body(req);return json(res,200,gradeLineup(request.lineup))}
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg}))});
