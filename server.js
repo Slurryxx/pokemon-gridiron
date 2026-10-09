@@ -107,6 +107,59 @@ async function newSession(res,userId){
  await pool.query("INSERT INTO gridiron_sessions(token_hash,user_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '30 days')",[hash,userId]);
  res.setHeader('Set-Cookie',authCookie(token,2592000));
 }
+
+// Friendship requests are directed; accepted friendships are mutual.
+async function friendsAPI(req,res,url,b,user){
+ await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_friendships (
+  id BIGSERIAL PRIMARY KEY,
+  requester_id BIGINT NOT NULL REFERENCES gridiron_users(id) ON DELETE CASCADE,
+  recipient_id BIGINT NOT NULL REFERENCES gridiron_users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK(requester_id<>recipient_id)
+ )`);
+ await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS gridiron_friendships_pair ON gridiron_friendships (LEAST(requester_id,recipient_id),GREATEST(requester_id,recipient_id))');
+ if(req.method==='GET'){
+  const q=String(url.searchParams.get('q')||'').trim().toLowerCase();
+  const friends=await pool.query(`SELECT f.id,f.status,f.requester_id=$1 AS outgoing,u.username,t.name AS team_name
+   FROM gridiron_friendships f JOIN gridiron_users u ON u.id=CASE WHEN f.requester_id=$1 THEN f.recipient_id ELSE f.requester_id END
+   LEFT JOIN gridiron_teams t ON t.user_id=u.id
+   WHERE f.requester_id=$1 OR f.recipient_id=$1 ORDER BY f.updated_at DESC`,[user.id]);
+  let results=[];
+  if(q.length>=2){const found=await pool.query(`SELECT u.username,t.name AS team_name FROM gridiron_users u LEFT JOIN gridiron_teams t ON t.user_id=u.id
+   WHERE u.id<>$1 AND (u.username ILIKE $2 OR t.name ILIKE $2) ORDER BY u.username LIMIT 20`,[user.id,'%'+q.replace(/[\\%_]/g,'\\async function accountAPI(req,res,url,b){')+'%']);results=found.rows}
+  return json(res,200,{username:user.username,friends:friends.rows,results});
+ }
+ if(req.method!=='POST')return json(res,405,{error:'Method not allowed'});
+ const action=String(b.action||'');
+ if(action==='request'){
+  const username=String(b.username||'').trim().toLowerCase();
+  if(!/^[a-z0-9_]{3,24}$/.test(username)||username===user.username)return json(res,400,{error:'Choose another valid username.'});
+  const target=await pool.query('SELECT id FROM gridiron_users WHERE username=$1',[username]);
+  if(!target.rows.length)return json(res,404,{error:'Player not found. Ask them to create an account first.'});
+  const result=await pool.query(`INSERT INTO gridiron_friendships(requester_id,recipient_id) VALUES($1,$2)
+   ON CONFLICT DO NOTHING RETURNING id`,[user.id,target.rows[0].id]);
+  if(!result.rows.length)return json(res,409,{error:'A friendship or friend request already exists.'});
+  return json(res,200,{ok:true});
+ }
+ const id=Number(b.id);if(!Number.isSafeInteger(id)||id<1)return json(res,400,{error:'Invalid request.'});
+ if(action==='accept'){
+  const result=await pool.query("UPDATE gridiron_friendships SET status='accepted',updated_at=NOW() WHERE id=$1 AND recipient_id=$2 AND status='pending' RETURNING id",[id,user.id]);
+  if(!result.rows.length)return json(res,409,{error:'Friend request unavailable.'});
+ }else if(action==='decline'){
+  const result=await pool.query("DELETE FROM gridiron_friendships WHERE id=$1 AND recipient_id=$2 AND status='pending' RETURNING id",[id,user.id]);
+  if(!result.rows.length)return json(res,409,{error:'Friend request unavailable.'});
+ }else if(action==='cancel'){
+  const result=await pool.query("DELETE FROM gridiron_friendships WHERE id=$1 AND requester_id=$2 AND status='pending' RETURNING id",[id,user.id]);
+  if(!result.rows.length)return json(res,409,{error:'Friend request unavailable.'});
+ }else if(action==='remove'){
+  const result=await pool.query("DELETE FROM gridiron_friendships WHERE id=$1 AND status='accepted' AND (requester_id=$2 OR recipient_id=$2) RETURNING id",[id,user.id]);
+  if(!result.rows.length)return json(res,409,{error:'Friend unavailable.'});
+ }else return json(res,400,{error:'Invalid action.'});
+ return json(res,200,{ok:true});
+}
+
 async function accountAPI(req,res,url,b){
  await accountsDB();
  // Username-only guest identity: intentionally no email or password.
@@ -132,6 +185,7 @@ async function accountAPI(req,res,url,b){
  }
  if(url.pathname==='/api/league'&&req.method==='GET'){await competitionDB();return json(res,200,{standings:await leagueRows(),rules:'3 points per accepted-match win; accepted matches only'});}
  if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
+ if(url.pathname==='/api/friends')return friendsAPI(req,res,url,b,user);
  if(['/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))await competitionDB();
  if(url.pathname==='/api/season'&&(req.method==='GET'||req.method==='POST')){const data=await seasonAPI({pool,user,method:req.method,body:b,simulate,validLineup,ready:db.length===151});return json(res,200,data)}
  if(url.pathname==='/api/profile'&&req.method==='GET'){
@@ -339,7 +393,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,stats:p.stats,salary:pokemonSalary(p.id)}))});
  const b=req.method==='POST'?await body(req):{};
- if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season'].includes(url.pathname))return accountAPI(req,res,url,b);
+ if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond','/api/season','/api/friends'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
  const r=room(b.code||url.searchParams.get('code'));
  if(url.pathname==='/api/join'&&req.method==='POST'){if(r.players[1]||r.phase!=='waiting')return json(res,409,{error:'Room full or already started'});const token=crypto.randomBytes(24).toString('hex');r.players[1]={token,ready:false};r.phase='draft';return json(res,200,{...view(r,1),token})}
