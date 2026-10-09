@@ -30,6 +30,91 @@ async function leaderboardDB(){
  await leaderboardReady;
 }
 
+
+const AUTH_COOKIE='gridiron_session';
+const hashPassword=(password,salt)=>crypto.scryptSync(password,salt,64).toString('hex');
+const authCookie=(token,maxAge)=>AUTH_COOKIE+'='+token+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age='+maxAge;
+async function accountsDB(){
+ if(!pool)throw Error('Account database unavailable. Configure DATABASE_URL on Render.');
+ await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_users(id BIGSERIAL PRIMARY KEY,username VARCHAR(24) NOT NULL UNIQUE,password_salt TEXT NOT NULL,password_hash TEXT NOT NULL,created_at TIMESTAMPTZ DEFAULT NOW())`);
+ await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_sessions(token_hash TEXT PRIMARY KEY,user_id BIGINT NOT NULL REFERENCES gridiron_users(id) ON DELETE CASCADE,expires_at TIMESTAMPTZ NOT NULL)`);
+ await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_teams(user_id BIGINT PRIMARY KEY REFERENCES gridiron_users(id) ON DELETE CASCADE,name VARCHAR(40) NOT NULL,lineup JSONB NOT NULL,updated_at TIMESTAMPTZ DEFAULT NOW())`);
+ await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_challenges(id BIGSERIAL PRIMARY KEY,challenger_id BIGINT NOT NULL REFERENCES gridiron_users(id),opponent_id BIGINT NOT NULL REFERENCES gridiron_users(id),challenger_name TEXT NOT NULL,opponent_name TEXT NOT NULL,challenger_lineup JSONB NOT NULL,opponent_lineup JSONB NOT NULL,result JSONB NOT NULL,created_at TIMESTAMPTZ DEFAULT NOW())`);
+}
+const validLineup=lineup=>lineup&&typeof lineup==='object'&&POSITIONS.every(p=>Number.isInteger(lineup[p])&&lineup[p]>=1&&lineup[p]<=151)&&new Set(POSITIONS.map(p=>lineup[p])).size===22;
+async function loggedIn(req){
+ const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(AUTH_COOKIE+'='));
+ if(!raw)return null;
+ const token=raw.slice(AUTH_COOKIE.length+1);
+ if(!/^[a-f0-9]{64}$/.test(token))return null;
+ const hash=crypto.createHash('sha256').update(token).digest('hex');
+ const r=await pool.query('SELECT u.id,u.username FROM gridiron_sessions s JOIN gridiron_users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>NOW()',[hash]);
+ return r.rows[0]||null;
+}
+async function newSession(res,userId){
+ const token=crypto.randomBytes(32).toString('hex'),hash=crypto.createHash('sha256').update(token).digest('hex');
+ await pool.query("INSERT INTO gridiron_sessions(token_hash,user_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '30 days')",[hash,userId]);
+ res.setHeader('Set-Cookie',authCookie(token,2592000));
+}
+async function accountAPI(req,res,url,b){
+ await accountsDB();
+ if(url.pathname==='/api/auth/register'&&req.method==='POST'){
+  const username=String(b.username||'').trim(),password=String(b.password||'');
+  if(!/^[a-zA-Z0-9_]{3,24}$/.test(username))return json(res,400,{error:'Username must be 3–24 letters, numbers or underscores.'});
+  if(password.length<10||password.length>128)return json(res,400,{error:'Password must be 10–128 characters.'});
+  const salt=crypto.randomBytes(16).toString('hex');
+  let user;try{const r=await pool.query('INSERT INTO gridiron_users(username,password_salt,password_hash) VALUES($1,$2,$3) RETURNING id,username',[username.toLowerCase(),salt,hashPassword(password,salt)]);user=r.rows[0]}catch(e){if(e.code==='23505')return json(res,409,{error:'Username already taken.'});throw e}
+  await newSession(res,user.id);return json(res,200,{user:{username:user.username}});
+ }
+ if(url.pathname==='/api/auth/login'&&req.method==='POST'){
+  const username=String(b.username||'').trim().toLowerCase(),password=String(b.password||'');
+  const r=await pool.query('SELECT * FROM gridiron_users WHERE username=$1',[username]);const user=r.rows[0];
+  const salt=user?.password_salt||'00000000000000000000000000000000';
+  const expected=Buffer.from(user?.password_hash||'0'.repeat(128),'hex'),actual=Buffer.from(hashPassword(password,salt),'hex');
+  if(!user||!crypto.timingSafeEqual(expected,actual))return json(res,401,{error:'Invalid username or password.'});
+  await newSession(res,user.id);return json(res,200,{user:{username:user.username}});
+ }
+ const user=await loggedIn(req);
+ if(url.pathname==='/api/auth/me'&&req.method==='GET')return json(res,200,{user:user?{username:user.username}:null});
+ if(url.pathname==='/api/auth/logout'&&req.method==='POST'){
+  const raw=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(AUTH_COOKIE+'='));
+  if(raw){const hash=crypto.createHash('sha256').update(raw.slice(AUTH_COOKIE.length+1)).digest('hex');await pool.query('DELETE FROM gridiron_sessions WHERE token_hash=$1',[hash])}
+  res.setHeader('Set-Cookie',authCookie('',0));return json(res,200,{ok:true});
+ }
+ if(!user)return json(res,401,{error:'Log in to save your team or challenge another player.'});
+ if(url.pathname==='/api/my-team'&&req.method==='GET'){
+  const r=await pool.query('SELECT name,lineup,updated_at FROM gridiron_teams WHERE user_id=$1',[user.id]);return json(res,200,{team:r.rows[0]||null,user:{username:user.username}});
+ }
+ if(url.pathname==='/api/my-team'&&req.method==='POST'){
+  if(!validLineup(b.lineup))return json(res,400,{error:'Assign 22 unique Pokémon to your lineup.'});
+  const name=String(b.name||user.username+"'s Dream Team").trim().slice(0,40);
+  await pool.query('INSERT INTO gridiron_teams(user_id,name,lineup) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET name=$2,lineup=$3,updated_at=NOW()',[user.id,name,JSON.stringify(b.lineup)]);
+  return json(res,200,{ok:true,name});
+ }
+ if(url.pathname==='/api/dream-opponents'&&req.method==='GET'){
+  const r=await pool.query('SELECT u.username,t.name,t.updated_at FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id WHERE u.id<>$1 ORDER BY t.updated_at DESC LIMIT 100',[user.id]);
+  return json(res,200,{opponents:r.rows});
+ }
+ if(url.pathname==='/api/dream-challenge'&&req.method==='POST'){
+  if(db.length!==151)return json(res,503,{error:'Pokémon database still loading.'});
+  const name=String(b.username||'').trim().toLowerCase();
+  const r=await pool.query('SELECT u.id,u.username,t.name,t.lineup FROM gridiron_teams t JOIN gridiron_users u ON u.id=t.user_id WHERE u.username=$1',[name]);
+  const opponent=r.rows[0];if(!opponent||String(opponent.id)===String(user.id))return json(res,404,{error:'Choose another player with a saved Dream Team.'});
+  const mine=await pool.query('SELECT name,lineup FROM gridiron_teams WHERE user_id=$1',[user.id]);
+  if(!mine.rows.length)return json(res,400,{error:'Save your Dream Team before challenging.'});
+  const team=mine.rows[0];if(!validLineup(team.lineup)||!validLineup(opponent.lineup))return json(res,400,{error:'One team has an invalid lineup.'});
+  const result=simulate([{lineup:team.lineup},{lineup:opponent.lineup}]);
+  const saved=await pool.query('INSERT INTO gridiron_challenges(challenger_id,opponent_id,challenger_name,opponent_name,challenger_lineup,opponent_lineup,result) VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING id',[user.id,opponent.id,team.name,opponent.name,JSON.stringify(team.lineup),JSON.stringify(opponent.lineup),JSON.stringify(result)]);
+  return json(res,200,{id:saved.rows[0].id});
+ }
+ if(url.pathname==='/api/dream-match'&&req.method==='GET'){
+  const id=Number(url.searchParams.get('id'));if(!Number.isSafeInteger(id)||id<1)return json(res,400,{error:'Invalid match ID'});
+  const r=await pool.query('SELECT * FROM gridiron_challenges WHERE id=$1 AND (challenger_id=$2 OR opponent_id=$2)',[id,user.id]);
+  if(!r.rows.length)return json(res,404,{error:'Match not found or not accessible.'});
+  const m=r.rows[0];return json(res,200,{id:m.id,teamNames:[m.challenger_name,m.opponent_name],lineups:[m.challenger_lineup,m.opponent_lineup],result:m.result});
+ }
+ return json(res,404,{error:'Unknown account endpoint'});
+}
 const PORT=process.env.PORT||3000,rooms=new Map(),POSITIONS=['QB','RB','WR1','WR2','WR3','TE','LT','LG','C','RG','RT','DE1','DE2','DT1','DT2','LB1','LB2','LB3','CB1','CB2','FS','SS'];
 let db=[],error='';
 async function init(){
@@ -172,6 +257,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
  if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,pokemon:db.map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg}))});
  const b=req.method==='POST'?await body(req):{};
+ if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
  const r=room(b.code||url.searchParams.get('code'));
  if(url.pathname==='/api/join'&&req.method==='POST'){if(r.players[1]||r.phase!=='waiting')return json(res,409,{error:'Room full or already started'});const token=crypto.randomBytes(24).toString('hex');r.players[1]={token,ready:false};r.phase='draft';return json(res,200,{...view(r,1),token})}
