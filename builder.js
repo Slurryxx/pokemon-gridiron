@@ -34,10 +34,7 @@ function renderBreakdown(){
 }
 function render(){renderField();renderChoices();renderBreakdown();$('statusText').textContent=Object.keys(lineup).length+'/22 positions filled'}
 function persist(){const url=new URL(location.href);const encoded=POS.map(p=>lineup[p]||0).join('.');url.searchParams.set('team',encoded);history.replaceState({},'',url)}
-async function score(){
- if(POS.some(p=>!lineup[p])){$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';return}
- try{const res=await fetch('/api/lineup-score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineup})});const data=await res.json();if(!res.ok)throw Error(data.error);$('overall').textContent=data.overall;$('offenseScore').textContent=data.offense;$('defenseScore').textContent=data.defense;message('Team saved locally. Your lineup is ready to compete.')}catch(e){message(e.message)}
-}
+function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
 async function init(){
  try{
   const response=await fetch('/api/catalog');if(!response.ok)throw Error('Could not load Pokémon');
