@@ -19,25 +19,34 @@ function update(x){room={...room,...x};$('home').textContent=x.rosters[0].length
  $('turn').textContent=x.phase==='draft'?(x.turn===x.side?'YOUR PICK':'OPPONENT PICK'):x.phase==='waiting'?'Waiting for your friend':x.phase==='lineups'?'Draft complete — set your lineup':'Game complete';
  $('pickno').textContent='Pick '+x.picks.length+' / 44 · Snake draft (1–2–2–1)';$('positionNow').textContent=x.currentPosition?('DRAFTING FOR: '+x.currentPosition):'DRAFT COMPLETE';
  $('rosters').replaceChildren(...x.rosters.map((ids,i)=>{
- const box=document.createElement('section');box.className='roster roster-team-'+i;
- const h=document.createElement('h3');h.textContent=(i===0?'🌲 Forest City':'⚡ Volt City')+' ('+ids.length+'/22)'+(x.ready[i]?' ✓':'');
- const sections=[['OFFENSE',POS.slice(0,11)],['DEFENSE',POS.slice(11)]];
- box.append(h);
- sections.forEach(([label,positions])=>{
-  const title=document.createElement('h4');title.className='roster-section';title.textContent=label;box.append(title);
-  const grid=document.createElement('div');grid.className='roster-grid';
-  positions.forEach(pos=>{
-   const draft=x.picks.find(p=>p.side===i&&p.position===pos);
-   const id=draft?.id;
-   const slot=document.createElement('div');slot.className='roster-slot'+(id?' filled':' empty');
-   const tag=document.createElement('span');tag.className='roster-position';tag.textContent=pos;
-   const img=document.createElement('img');img.className='roster-sprite';img.alt=id?monName(id):'Empty position';
-   if(id){img.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png';img.loading='lazy'}
-   const name=document.createElement('span');name.className='roster-name';name.textContent=id?monName(id):'Open';
-   slot.append(tag,img,name);grid.append(slot)
-  });box.append(grid)
+ const box=document.createElement('section');box.className='roster formation-team-'+i;
+ const heading=document.createElement('h3');heading.textContent=(i===0?'🌲 FOREST CITY':'⚡ VOLT CITY')+' — '+ids.length+'/22'+(x.ready[i]?' ✓':'');
+ const field=document.createElement('div');field.className='formation-field';
+ const defenseTitle=document.createElement('span');defenseTitle.className='formation-label formation-defense-label';defenseTitle.textContent='DEFENSE';
+ const offenseTitle=document.createElement('span');offenseTitle.className='formation-label formation-offense-label';offenseTitle.textContent='OFFENSE';
+ field.append(defenseTitle,offenseTitle);
+ const coords={
+  FS:[40,7],SS:[60,7],CB1:[10,20],CB2:[90,20],LB1:[34,24],LB2:[50,24],LB3:[66,24],
+  DE1:[23,37],DT1:[41,37],DT2:[59,37],DE2:[77,37],
+  WR1:[8,59],WR2:[92,59],WR3:[18,75],TE:[79,59],
+  LT:[31,59],LG:[40,59],C:[50,59],RG:[60,59],RT:[69,59],
+  QB:[50,77],RB:[50,92]
+ };
+ POS.forEach(pos=>{
+  const draft=x.picks.find(p=>p.side===i&&p.position===pos);
+  const pokemon=draft?.id,point=coords[pos];
+  const slot=document.createElement('div');slot.className='formation-player'+(pokemon?' occupied':' vacant')+(POS.indexOf(pos)<11?' offense':' defense');
+  slot.style.left=point[0]+'%';slot.style.top=point[1]+'%';
+  slot.title=pos+' — '+(pokemon?monName(pokemon):'Undrafted');
+  const sprite=document.createElement('img');sprite.className='formation-sprite';sprite.alt=pokemon?monName(pokemon):'';
+  if(pokemon){sprite.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+pokemon+'.png';sprite.loading='lazy'}
+  const nameplate=document.createElement('span');nameplate.className='formation-nameplate';
+  const name=document.createElement('strong');name.textContent=pokemon?monName(pokemon):'—';
+  const role=document.createElement('small');role.textContent=pos;
+  nameplate.append(name,role);slot.append(sprite,nameplate);field.append(slot)
  });
- return box
+ const hint=document.createElement('p');hint.className='formation-hint';hint.textContent='Defense at the top · Offense at the bottom · Pokémon appear as they are drafted';
+ box.append(heading,field,hint);return box
 }));
  $('assignments').hidden=x.phase!=='lineups';$('results').hidden=x.phase!=='finished';if(x.phase==='lineups'&&lastPhase!=='lineups')autoAssign();$('ready').disabled=x.ready[x.side];if(x.phase==='finished'&&x.result)results(x.result);lastPhase=x.phase;render();
 }
