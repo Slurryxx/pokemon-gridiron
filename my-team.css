@@ -1,1 +1,27 @@
 .roster-shell{max-width:1500px;margin:auto;padding:22px}.roster-shell header{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}.roster-shell nav{display:flex;gap:20px;flex-wrap:wrap}.roster-shell a{color:#cbf26b;font-weight:800}.roster-sections{display:grid;gap:20px}.roster-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}.roster-card{display:flex;align-items:center;flex-direction:column;gap:5px;padding:16px 8px;border:2px solid #638e6b;border-radius:14px;background:linear-gradient(160deg,#28503d,#122e2b);min-height:190px;text-align:center}.roster-card img{width:clamp(90px,9vw,145px);height:clamp(90px,9vw,145px);object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 8px 5px #0006)}.roster-card strong{font-size:14px;text-transform:capitalize}.roster-card small{color:#d4f99c;font-weight:900;letter-spacing:1px}.roster-shell h1{font-size:clamp(32px,5vw,56px)}@media(max-width:600px){.roster-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.roster-card{min-height:145px;padding:8px 3px}.roster-card img{width:85px;height:85px}.roster-card strong{font-size:11px}}
+/* Roster page must override draft.css's global main grid. */
+body{background:radial-gradient(ellipse at top,#214437 0%,#10251e 65%);color:#e9f7e9}
+main.roster-shell{display:block!important;width:min(1440px,calc(100% - 36px));max-width:1440px;margin:0 auto;padding:0 0 60px}
+.roster-shell>header{display:flex;width:100%;align-items:center;justify-content:space-between;gap:18px;padding:24px 0;margin:0 0 28px;border-bottom:1px solid #496c55}
+.roster-shell>header b{font-size:clamp(19px,2.5vw,28px)}
+.roster-shell nav{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.roster-shell nav a{display:inline-block;color:#d9f4bf;text-decoration:none;padding:10px 14px;border:1px solid #55745c;border-radius:9px;font-size:13px}
+.roster-shell nav a:hover{background:#294e38}
+.roster-shell>.panel{width:100%;margin:0;padding:clamp(20px,3vw,44px);background:#f2f7ee;border-radius:22px;box-shadow:0 25px 60px #0003}
+.roster-shell h1{font-size:clamp(30px,4vw,54px);line-height:1.1;letter-spacing:-1px;margin:0 0 16px}
+.roster-shell #teamTitle{font-size:clamp(24px,3vw,35px);margin:10px 0 5px}
+.roster-shell #teamStatus{font-size:14px;color:#526b59;line-height:1.6;margin:0 0 22px}
+.roster-shell>.panel>p:first-of-type a{display:inline-flex;background:#bfe96c;color:#19351f;padding:13px 18px;border-radius:10px;text-decoration:none;font-weight:900;font-size:13px}
+.roster-shell>.panel>p:last-of-type{display:flex;gap:14px;flex-wrap:wrap;margin-top:28px;font-size:14px}
+.roster-shell>.panel>p:last-of-type a{color:#275b3a}
+.roster-sections{display:grid;grid-template-columns:1fr;gap:34px}
+.roster-sections>section{min-width:0}
+.roster-sections h2{font-size:clamp(22px,2.5vw,29px);padding-bottom:12px;border-bottom:2px solid #d6e5d1;margin:10px 0 18px}
+.roster-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:13px}
+.roster-card{box-sizing:border-box;min-width:0;min-height:210px;padding:14px 8px;gap:7px;border:1px solid #527c61;border-radius:14px;background:linear-gradient(150deg,#275340,#15372e);box-shadow:0 5px 14px #0e31201a}
+.roster-card img{width:min(100%,132px);height:128px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 7px 4px #0006)}
+.roster-card strong{display:block;color:#f4fff0!important;font-size:15px;line-height:1.25;text-transform:capitalize;overflow-wrap:anywhere}
+.roster-card small{color:#c9f48c!important;font-size:11px;letter-spacing:.4px}
+@media(max-width:1100px){.roster-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:660px){main.roster-shell{width:calc(100% - 20px)}.roster-shell>header{align-items:flex-start;flex-direction:column;gap:10px}.roster-shell nav{justify-content:flex-start;gap:6px}.roster-shell nav a{padding:8px 10px;font-size:12px}.roster-shell>.panel{padding:17px;border-radius:15px}.roster-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.roster-card{min-height:160px;padding:9px 4px;gap:4px}.roster-card img{height:86px;width:min(100%,95px)}.roster-card strong{font-size:12px}.roster-card small{font-size:10px}}
+@media(max-width:360px){.roster-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
