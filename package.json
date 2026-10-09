@@ -1,0 +1,12 @@
+{
+  "name": "pokemon-gridiron-draft",
+  "version": "6.0.0",
+  "private": true,
+  "description": "Two-player exclusive snake draft and football simulation",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
