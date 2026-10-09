@@ -96,7 +96,7 @@ async function init(){
   render();score();
  }catch(e){message('Unable to load: '+e.message)}
 }
-document.getElementById('generateDreamTeam').onclick=()=>{message('Generating a lineup…');};
+document.getElementById('generateDreamTeam').onclick=()=>{if(!catalog.length)return;const used=new Set();let left=salaryCap;lineup={};for(const [i,pos] of POS.entries()){const options=catalog.filter(p=>!used.has(p.id)&&p.salary<=left-(21-i)*3).sort((a,b)=>fit(b,pos)/b.salary-fit(a,pos)/a.salary);if(!options.length)return message('Could not generate a team');const p=options[Math.floor(Math.random()*Math.min(5,options.length))];lineup[pos]=p.id;used.add(p.id);left-=p.salary}persist();render();score();message('Team generated. Press Save My Team!')};
 $('pokemonSearch').oninput=renderChoices;
 $('priceSort').onchange=renderChoices;
 $('removePlayer').onclick=removeSelected;
