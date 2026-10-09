@@ -1,5 +1,4 @@
 'use strict';
-const {standings}=require('./season.js');
 const POS=['QB','RB','WR1','WR2','WR3','TE','LT','LG','C','RG','RT','DE1','DE2','DT1','DT2','LB1','LB2','LB3','CB1','CB2','FS','SS'];
 const RIVALS=['Pallet Pioneers','Cerulean Cyclones','Vermilion Volts','Celadon Guardians','Fuchsia Phantoms','Saffron Stars','Cinnabar Inferno','Viridian Titans','Indigo Legends'];
 const CHAPTERS=['Rookie General Manager','Building the Foundation','Rivalry Season','The Draft Room','Midnight Trade Talks','The Playoff Chase','Front Office Pressure','The Contender','Road to Indigo','Dynasty Dreams','Legacy Season','Hall of Champions'];
@@ -10,8 +9,10 @@ function roster(catalog,cap,seed){
  for(let i=0;i<POS.length;i++){
   const rest=POS.length-i-1,choices=pool.filter(p=>!used.has(p.id)&&p.cost<=remaining-rest*3);
   if(!choices.length)throw Error('Could not assemble a valid rival roster.');
-  const band=Math.min(choices.length,Math.max(5,Math.floor(choices.length*(0.24+rand()*.42))));
-  const p=choices[Math.floor(rand()*band)];picked[POS[i]]=p.id;used.add(p.id);remaining-=p.cost;
+  const fair=choices.filter(p=>p.cost<=Math.ceil(remaining/(rest+1)*1.3));
+  const candidates=fair.length?fair:choices;
+  const lower=Math.floor(candidates.length*.55);
+  const p=candidates[lower+Math.floor(rand()*(candidates.length-lower))];picked[POS[i]]=p.id;used.add(p.id);remaining-=p.cost;
  }
  return picked;
 }
