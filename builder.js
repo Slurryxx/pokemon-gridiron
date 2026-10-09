@@ -52,6 +52,11 @@ $('pokemonSearch').oninput=renderChoices;$('sortMode').onchange=renderChoices;
 $('autoBest').onclick=()=>{if(!best){message('Best team is still loading');return}lineup={...best.lineup};persist();render();score()};
 $('clearTeam').onclick=()=>{lineup={};selected='QB';persist();render();score();message('Lineup cleared')};
 $('shareTeam').onclick=async()=>{persist();try{await navigator.clipboard.writeText(location.href);message('Shareable lineup link copied!')}catch{message('Copy this URL to share: '+location.href)}};
+$('challengeFriends').onclick=async()=>{
+ const url=new URL('/builder.html',location.origin);
+ try{await navigator.clipboard.writeText(url.href);message('Challenge link copied! Friends can build their own team, enter their name, and submit to the same leaderboard.')}
+ catch{message('Send your friends this link: '+url.href)}
+};
 async function refreshBoard(){
  try{const r=await fetch('/api/leaderboard');if(!r.ok)throw Error('Could not load rankings');const data=await r.json();const list=$('leaderboardEntries');list.replaceChildren();if(!data.entries.length){list.textContent='No teams submitted yet. Be the first!';return}
  data.entries.forEach((entry,i)=>{const row=document.createElement('div');row.className='leaderboard-row';const rank=document.createElement('strong');rank.textContent='#'+(i+1);const title=document.createElement('span');title.textContent=entry.name;const grade=document.createElement('strong');grade.textContent=entry.score+'/100';const details=document.createElement('small');details.textContent='OFF '+entry.offense+' · DEF '+entry.defense;row.append(rank,title,details,grade);list.append(row)})
