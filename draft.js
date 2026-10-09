@@ -26,9 +26,19 @@ async function refresh(){if(!room)return;try{update(await api('state?code='+room
 async function pick(id){try{update(await api('pick',{code:room.code,token:room.token,id}))}catch(e){msg(e.message);refresh()}}
 function autoAssign(){const picks=(room?.picks||[]).filter(p=>p.side===room.side);assigned=Object.fromEntries(picks.map(p=>[p.position,p.id]));renderPositions()}
 function renderPositions(){const ids=room?.rosters?.[room.side]||[];$('positions').replaceChildren(...POS.map(pos=>{const box=document.createElement('div');box.className='pos';const label=document.createElement('b');label.textContent=pos;const select=document.createElement('select');select.setAttribute('aria-label',pos);ids.forEach(id=>{const opt=document.createElement('option');opt.value=id;opt.textContent=monName(id);select.append(opt)});select.value=assigned[pos]||'';select.onchange=()=>{assigned[pos]=Number(select.value)};box.append(label,select);return box}))}
-function showEvent(e){$('livehome').textContent=e.scores[0];$('liveaway').textContent=e.scores[1];$('livequarter').textContent=e.quarter===5?'FINAL / OT':'Q'+e.quarter;$('livecall').textContent=e.text;const p=document.createElement('p');p.textContent=e.text;p.className='event-'+e.kind;$('plays').prepend(p)}
+function fieldUpdate(e){
+ const t=Number.isInteger(e.possession)?e.possession:0,spot=Math.max(0,Math.min(100,Number(e.spot)||25)),x=t===0?spot:100-spot;
+ $('fieldpossession').textContent=(t===0?'FOREST CITY':'VOLT CITY')+' BALL';
+ $('fieldyard').textContent=spot<=50?'OWN '+Math.round(spot):'OPP '+Math.round(100-spot);
+ $('scrimmage').style.left=x+'%';
+ [['qb',e.actors?.offense,x-7,64],['carrier',e.actors?.carrier,x,38],['defense',e.actors?.defense,x+7,50]].forEach(([role,id,px,py])=>{const el=$('field-'+role),img=$('sprite-'+role);el.style.left=Math.max(8,Math.min(92,px))+'%';el.style.top=py+'%';el.style.opacity=id?'1':'.25';if(id)img.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+id+'.png'});
+ $('field-ball').style.left=Math.max(8,Math.min(92,x))+'%';
+ const flash=$('field-flash');flash.textContent=({touchdown:'TOUCHDOWN!',turnover:'TURNOVER!',fieldgoal:'FIELD GOAL!',bigplay:'BIG PLAY!'})[e.kind]||'';
+ flash.classList.remove('active');void flash.offsetWidth;if(flash.textContent)flash.classList.add('active');
+}
+function showEvent(e){fieldUpdate(e);$('livehome').textContent=e.scores[0];$('liveaway').textContent=e.scores[1];$('livequarter').textContent=e.quarter===5?'FINAL / OT':'Q'+e.quarter;$('livecall').textContent=e.text;const p=document.createElement('p');p.textContent=e.text;p.className='event-'+e.kind;$('plays').prepend(p)}
 function replayStop(){if(replayTimer)clearTimeout(replayTimer);replayTimer=null}
-function replayStart(){if(!room?.result)return;replayStop();replayIndex=0;$('plays').replaceChildren();$('final').hidden=true;$('totals').hidden=true;$('livehome').textContent='0';$('liveaway').textContent='0';$('livequarter').textContent='KICKOFF';$('livecall').textContent='Teams take the field!';replayNext()}
+function replayStart(){if(!room?.result)return;replayStop();replayIndex=0;$('plays').replaceChildren();$('final').hidden=true;$('totals').hidden=true;$('livehome').textContent='0';$('liveaway').textContent='0';$('livequarter').textContent='KICKOFF';$('livecall').textContent='Teams take the field!';fieldUpdate({spot:25,possession:0,kind:'kickoff'});replayNext()}
 function replayNext(){const r=room?.result;if(!r)return;const events=r.events||r.log.map(text=>({text,kind:'play',quarter:1,scores:r.scores}));if(replayIndex>=events.length){$('winner').textContent=(r.winner===0?'Forest City':'Volt City')+' wins!';$('final').textContent=r.scores.join(' – ');$('totals').textContent='Yards: '+r.yards.join('–')+' · Turnovers: '+r.turnovers.join('–');$('final').hidden=false;$('totals').hidden=false;return}const e=events[replayIndex++];showEvent(e);replayTimer=setTimeout(replayNext,Number($('speed').value)*(e.kind==='touchdown'||e.kind==='turnover'?2:1))}
 function results(r){const key=room.code+'-'+r.scores.join('-')+'-'+(r.events?.length||r.log.length);if(replayKey===key)return;replayKey=key;$('winner').textContent='Game Day — Live Replay';replayStart()}
 $('replay').onclick=replayStart;
