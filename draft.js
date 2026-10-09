@@ -95,11 +95,11 @@ function fieldUpdate(e){
  cancelFieldAnimation();
  const t=Number.isInteger(e.possession)?e.possession:0,opp=1-t,spot=Math.max(0,Math.min(100,Number(e.spot)||25));
  const direction=t===0?1:-1,scored=e.kind==='touchdown';
- // The goal line is inside the visual field: 10% left, 90% right.
+ // The goal line is inside the visual field: 8% left, 92% right.
  // A touchdown must finish visibly BEYOND that line, inside the end zone.
- const x=scored?(direction===1?96:4):fieldClamp(10+(t===0?spot:100-spot)*.8);
+ const x=scored?(direction===1?96:4):fieldClamp(8+(t===0?spot:100-spot)*.84);
  const actors=e.actors||{},gain=Number(actors.gain)||0;
- const origin=fieldClamp(x-direction*Math.max(0,gain)*.8);
+ const origin=fieldClamp(x-direction*Math.max(0,gain)*.84);
  const playing=!!actors.carrier&&['play','bigplay','touchdown','incomplete','sack','turnover'].includes(e.kind);
  const base=playing?origin:x,pass=actors.playType==='pass';
  $('fieldpossession').textContent=(t===0?'FOREST CITY':'VOLT CITY')+' BALL';
