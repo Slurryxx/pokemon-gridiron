@@ -26,3 +26,7 @@ This repository includes `render.yaml`. In [Render](https://dashboard.render.com
 - Game results are generated immediately rather than streamed as live animation.
 - Ratings and simulation are experimental; no user accounts, ranked games, or persistent database yet.
 - Pokémon and sprites are third-party IP. Review relevant permissions before public/commercial launch.
+
+## Position-by-position drafting
+
+Each team's next selection is assigned to the next required position in the fixed order: QB, RB, three WRs, TE, five offensive linemen, two DEs, two DTs, three LBs, two CBs, FS and SS. The current position is shown prominently during the draft and every draft board entry is labeled with its position. The completed lineup is prefilled from those assignments and may be adjusted before locking.
