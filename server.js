@@ -365,6 +365,6 @@ http.createServer((req,res)=>{const url=new URL(req.url,'http://localhost');if(u
  let name;try{name=decodeURIComponent(url.pathname)}catch{return json(res,400,{error:'Bad URL'})}
  if(name==='/')name='/index.html';const file=path.resolve(__dirname,'.'+name);
  if(!file.startsWith(__dirname+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()||file.endsWith('pokemon_151.json'))return json(res,404,{error:'Not found'});
- res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'text/plain','X-Content-Type-Options':'nosniff'});fs.createReadStream(file).pipe(res)
+ res.writeHead(200,{'Content-Type':mime[path.extname(file)]||'text/plain','X-Content-Type-Options':'nosniff','Cache-Control':'no-cache, must-revalidate'});fs.createReadStream(file).pipe(res)
 }).listen(PORT,'0.0.0.0',()=>console.log('Pokémon Gridiron listening on '+PORT));
 setInterval(()=>{for(const [code,r] of rooms)if(Date.now()-r.created>21600000)rooms.delete(code)},3600000).unref();
