@@ -19,37 +19,36 @@ function renderField(){
 }
 function renderChoices(){
  $('pickerTitle').textContent='Pick your '+selected;
- const search=$('pokemonSearch').value.trim().toLowerCase(),sort=$('sortMode').value,used=new Set(Object.values(lineup).map(Number));
- const list=catalog.filter(p=>p.name.includes(search)).sort((a,b)=>sort==='dex'?a.id-b.id:sort==='grade'?(records[b.id]?.grade||0)-(records[a.id]?.grade||0):fit(b.id,selected)-fit(a.id,selected)||a.id-b.id);
+ const search=$('pokemonSearch').value.trim().toLowerCase(),used=new Set(Object.values(lineup).map(Number));
+ const list=catalog.filter(p=>p.name.includes(search)).sort((a,b)=>a.id-b.id);
  $('pokemonChoices').replaceChildren(...list.map(p=>{
   const taken=used.has(p.id)&&lineup[selected]!==p.id;
-  const btn=document.createElement('button');btn.className='pokemon-choice'+(taken?' used':'')+(best?.lineup?.[selected]===p.id?' best':'');btn.disabled=taken;btn.title=taken?'Already assigned to another position':p.name+' · '+(records[p.id]?.position||'Unscouted');
+  const btn=document.createElement('button');btn.className='pokemon-choice'+(taken?' used':'');btn.disabled=taken;btn.title=taken?'Already assigned to another position':p.name;
   const img=document.createElement('img');img.src=sprite(p.id);img.loading='lazy';img.alt='';
   const title=document.createElement('strong');title.textContent=p.name;
-  const grade=document.createElement('small');grade.textContent=records[p.id]?.grade!=null?'Fit '+fit(p.id,selected)+' / Grade '+records[p.id].grade:'Not scouted';
-  btn.append(img,title,grade);btn.onclick=()=>{lineup[selected]=p.id;const next=POS.find(pos=>!lineup[pos]);if(next)selected=next;persist();render();score()};return btn
+  btn.append(img,title);btn.onclick=()=>{lineup[selected]=p.id;const next=POS.find(pos=>!lineup[pos]);if(next)selected=next;persist();render();score()};return btn
  }))
 }
 function renderBreakdown(){
- $('breakdown').replaceChildren(...POS.map(pos=>{const row=document.createElement('div');row.className='breakdown-row';const left=document.createElement('span');left.textContent=pos+' · '+(lineup[pos]?name(lineup[pos]):'Open');const right=document.createElement('strong');right.textContent=lineup[pos]?fit(lineup[pos],pos)+'/100':'—';row.append(left,right);return row}))
+ $('breakdown').replaceChildren(...POS.map(pos=>{const row=document.createElement('div');row.className='breakdown-row';row.textContent=pos+' · '+(lineup[pos]?name(lineup[pos]):'Open');return row}))
 }
 function render(){renderField();renderChoices();renderBreakdown();$('statusText').textContent=Object.keys(lineup).length+'/22 positions filled'}
 function persist(){const url=new URL(location.href);const encoded=POS.map(p=>lineup[p]||0).join('.');url.searchParams.set('team',encoded);history.replaceState({},'',url)}
 async function score(){
  if(POS.some(p=>!lineup[p])){$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';return}
- try{const res=await fetch('/api/lineup-score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineup})});const data=await res.json();if(!res.ok)throw Error(data.error);$('overall').textContent=data.overall;$('offenseScore').textContent=data.offense;$('defenseScore').textContent=data.defense;message('Complete lineup scored! '+(best?'Best possible: '+best.overall+'/100. ':'')+'Your score is an average scouting fit grade, not a win probability.')}catch(e){message(e.message)}
+ try{const res=await fetch('/api/lineup-score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lineup})});const data=await res.json();if(!res.ok)throw Error(data.error);$('overall').textContent=data.overall;$('offenseScore').textContent=data.offense;$('defenseScore').textContent=data.defense;message('Team saved locally. Your lineup is ready to compete.')}catch(e){message(e.message)}
 }
 async function init(){
  try{
-  const [catRes,scRes,bestRes]=await Promise.all([fetch('/api/catalog'),fetch('/api/scouting'),fetch('/api/best-lineup')]);
-  if(!catRes.ok||!scRes.ok||!bestRes.ok)throw Error('Could not load lineup data');
-  const c=await catRes.json(),sc=await scRes.json();best=await bestRes.json();catalog=c.pokemon;records=Object.fromEntries(sc.records.map(p=>[p.id,p]));
-  const saved=new URL(location.href).searchParams.get('team');if(saved){const ids=saved.split('.').map(Number);if(ids.length===22&&ids.every(n=>Number.isInteger(n)&&n>=0&&n<=151)){const nonzero=ids.filter(Boolean);if(new Set(nonzero).size===nonzero.length)POS.forEach((p,i)=>{if(ids[i])lineup[p]=ids[i]})}}
-  render();score();message('Scouting loaded: 150 graded Pokémon. Best possible complete lineup: '+best.overall+'/100.');
+  const response=await fetch('/api/catalog');if(!response.ok)throw Error('Could not load Pokémon');
+  const data=await response.json();catalog=data.pokemon;
+  const saved=new URL(location.href).searchParams.get('team');
+  if(saved){const ids=saved.split('.').map(Number),valid=new Set(catalog.map(p=>p.id));if(ids.length===22&&ids.every(n=>n===0||valid.has(n))){const nonzero=ids.filter(Boolean);if(new Set(nonzero).size===nonzero.length)POS.forEach((p,i)=>{if(ids[i])lineup[p]=ids[i]})}}
+  render();score();message('Choose your 22 Pokémon. Scouting hints and optimal lineup suggestions are hidden for competitive play.');
  }catch(e){message('Unable to load: '+e.message)}
 }
-$('pokemonSearch').oninput=renderChoices;$('sortMode').onchange=renderChoices;
-$('autoBest').onclick=()=>{if(!best){message('Best team is still loading');return}lineup={...best.lineup};persist();render();score()};
+$('pokemonSearch').oninput=renderChoices;
+
 async function accountRequest(url,method,data){const r=await fetch(url,{method:method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
 $('saveDreamTeam').onclick=async()=>{try{if(POS.some(p=>!lineup[p])||new Set(Object.values(lineup)).size!==22)throw Error('Fill all 22 positions with unique Pokémon first.');const name=$('teamName').value.trim()||'My Dream Team';const d=await accountRequest('/api/my-team','POST',{name,lineup});message('✓ '+d.name+' saved to your account! Challenge other teams in Dream Team Battles.')}catch(e){if(/Log in/i.test(e.message)){message('Log in first to save your team.');location.href='/account.html?next='+encodeURIComponent('/builder.html')}else message(e.message)}};
 $('loadDreamTeam').onclick=async()=>{try{const d=await accountRequest('/api/my-team');if(!d.team)throw Error('No saved team yet. Save one first.');lineup=d.team.lineup;$('teamName').value=d.team.name;persist();render();score();message('Loaded '+d.team.name+' from your account.')}catch(e){message(e.message)}};
