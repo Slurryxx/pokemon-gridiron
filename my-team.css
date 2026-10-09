@@ -49,3 +49,14 @@ main.roster-shell{display:block!important;width:min(1440px,calc(100% - 36px));ma
  #shareStatus{overflow-wrap:anywhere;font-size:12px}
 }
 @media(max-width:360px){.team-share-actions{grid-template-columns:1fr}.team-share-actions #previewTeam{grid-column:auto}}
+
+/* My Team becomes a destination, not a dead-end roster list. */
+.my-team-hero{padding:clamp(18px,3vw,30px);border-radius:15px;background:radial-gradient(circle at 95% 0,#a5d56355,transparent 45%),linear-gradient(125deg,#193c30,#143b3a);color:#f3ffec;margin-bottom:20px}
+.my-team-eyebrow{color:#d6fa79;font-size:10px;letter-spacing:1.5px;font-weight:950}
+.roster-shell .my-team-hero h1{color:#fff;font-size:clamp(34px,5vw,54px);margin:12px 0 8px}
+.my-team-hero p{font-size:13px;line-height:1.6;color:#c5dcc9;margin:0 0 19px}
+.my-team-hero-actions{display:flex;flex-wrap:wrap;gap:9px}
+.roster-shell .my-team-hero-actions a{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;min-height:46px;padding:12px 16px;border-radius:9px;background:#d6fa79;color:#173726;font-size:12px;font-weight:950}
+.roster-shell .my-team-hero-actions a+a{background:#ffffff15;color:#e9ffdd;border:1px solid #9bbf88}
+.roster-shell nav a[aria-current=page]{background:#2d553b;border-color:#d6fa79}
+@media(max-width:650px){.my-team-hero{padding:20px 14px}.my-team-hero-actions{display:grid;grid-template-columns:1fr 1fr}.roster-shell .my-team-hero-actions a{padding:10px 7px;font-size:11px;min-width:0}.roster-shell .my-team-hero h1{font-size:34px}.roster-shell>.panel{padding:12px}.roster-shell>header{margin-bottom:12px}}
