@@ -19,6 +19,183 @@ function renderField(){
  })
 }
 function removeSelected(){const id=lineup[selected];if(!id)return;const removedName=name(id),refund=salary(id);delete lineup[selected];persist();render();score();message('Removed '+removedName+' from '+selected+'. $'+refund+' returned to your budget. Choose a replacement whenever you like.');}
+// Lightweight position-fit suggestions. Only public base stats are used; no hidden simulator scores.
+const stat=(p,key)=>Number(p.stats?.[key])||0;
+function positionFit(p,pos){
+ const weights=pos==='QB'?{'special-attack':.32,'speed':.26,'hp':.18,'special-defense':.14,'attack':.10}:
+ pos==='RB'?{'speed':.38,'attack':.32,'hp':.18,'defense':.12}:
+ pos.startsWith('WR')?{'speed':.42,'attack':.18,'special-attack':.25,'hp':.15}:
+ pos==='TE'?{'hp':.27,'attack':.27,'defense':.23,'special-defense':.23}:
+ ['LT','LG','C','RG','RT'].includes(pos)?{'hp':.30,'defense':.35,'attack':.22,'special-defense':.13}:
+ pos.startsWith('DE')?{'attack':.37,'speed':.25,'defense':.23,'hp':.15}:
+ pos.startsWith('DT')?{'defense':.36,'hp':.33,'attack':.24,'special-defense':.07}:
+ pos.startsWith('LB')?{'attack':.25,'defense':.25,'speed':.27,'hp':.23}:
+ pos.startsWith('CB')?{'speed':.42,'defense':.28,'special-defense':.20,'hp':.10}:
+ {'speed':.28,'defense':.25,'special-defense':.27,'hp':.20};
+ return Object.entries(weights).reduce((sum,[key,w])=>sum+stat(p,key)*w,0);
+}
+function choosePokemon(p){
+ lineup[selected]=p.id;
+ const next=POS.find(pos=>!lineup[pos]);if(next)selected=next;
+ persist();render();score();
+}
+function renderRecommendations(){
+ const area=$('recommendedChoices');area.replaceChildren();
+ $('recommendationTitle').textContent='Quick picks for '+selected;
+ const used=new Set(Object.values(lineup).map(Number)),current=lineup[selected];
+ const available=catalog.filter(p=>(!used.has(p.id)||p.id===current)&&spent()-salary(current)+p.salary<=salaryCap);
+ if(!available.length){const note=document.createElement('p');note.textContent='No affordable Pokémon available. Remove or swap a player to free salary.';area.append(note);return}
+ const byFit=[...available].sort((a,b)=>positionFit(b,selected)-positionFit(a,selected)||a.id-b.id);
+ const byValue=[...available].sort((a,b)=>positionFit(b,selected)/Math.max(1,b.salary)-positionFit(a,selected)/Math.max(1,a.salary)||a.id-b.id);
+ const cheap=[...available].sort((a,b)=>a.salary-b.salary||positionFit(b,selected)-positionFit(a,selected));
+ const picks=[['Best fit',byFit],['Best value',byValue],['Budget pick',cheap]];
+ const shown=new Set();
+ for(const [label,ranked] of picks){
+  const p=ranked.find(x=>!shown.has(x.id));if(!p)continue;shown.add(p.id);
+  const button=document.createElement('button');button.type='button';button.className='recommendation-card';
+  button.title='Choose '+p.name+' for '+selected+' for 
+ $('pickerTitle').textContent='Pick your '+selected;
+ const search=$('pokemonSearch').value.trim().toLowerCase(),used=new Set(Object.values(lineup).map(Number));
+ const sort=$('priceSort').value;const list=catalog.filter(p=>p.name.includes(search)).sort((a,b)=>sort==='low'?a.salary-b.salary||a.id-b.id:sort==='high'?b.salary-a.salary||a.id-b.id:sort==='name'?a.name.localeCompare(b.name):a.id-b.id);
+ $('pickerGuide').textContent='Editing '+selected+(lineup[selected]?' · '+name(lineup[selected])+' currently selected':' · Empty position')+' · '+list.length+' Pokémon found';
+ const remove=$('removePlayer');remove.hidden=!lineup[selected];remove.disabled=!lineup[selected];remove.textContent=lineup[selected]?'✕ Remove '+name(lineup[selected])+' from '+selected:'Remove Player';
+ $('pokemonChoices').replaceChildren(...list.map(p=>{
+  const taken=used.has(p.id)&&lineup[selected]!==p.id;
+  const tooExpensive=spent()-salary(lineup[selected])+p.salary>salaryCap;
+  const btn=document.createElement('button');btn.type='button';btn.className='pokemon-choice'+(taken?' used':'')+(lineup[selected]===p.id?' chosen':'');btn.disabled=taken||tooExpensive;btn.title=taken?'Already assigned to another position':tooExpensive?'Over salary cap':p.name+' · $'+p.salary;
+  const img=document.createElement('img');img.src=sprite(p.id);img.loading='lazy';img.alt='';
+  const title=document.createElement('strong');title.textContent=p.name;
+  const cost=document.createElement('small');cost.textContent='$'+p.salary;btn.append(img,title,cost);btn.onclick=()=>choosePokemon(p);return btn
+ }))
+}
+function renderBreakdown(){
+ $('breakdown').replaceChildren(...POS.map(pos=>{
+  const row=document.createElement('div');row.className='breakdown-row';
+  const pick=document.createElement('button');pick.type='button';pick.className='roster-position-pick';
+  pick.textContent=pos+' · '+(lineup[pos]?name(lineup[pos])+' · $'+salary(lineup[pos]):'Open');
+  pick.onclick=()=>{selected=pos;render()};row.append(pick);
+  if(lineup[pos]){const remove=document.createElement('button');remove.type='button';remove.className='roster-remove';remove.textContent='✕';remove.title='Remove '+name(lineup[pos])+' from '+pos;remove.setAttribute('aria-label',remove.title);remove.onclick=()=>{selected=pos;removeSelected()};row.append(remove)}
+  return row
+ }))
+}
+function render(){renderField();renderRecommendations();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
+function persist(){try{if(activeUsername)sessionStorage.setItem('gridiron_draft_lineup_'+activeUsername,JSON.stringify({lineup,name:$('teamName').value}));}catch{}}
+function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
+async function init(){
+ try{
+  const response=await fetch('/api/catalog');if(!response.ok)throw Error('Could not load Pokémon');
+  const data=await response.json();if(!data.ready)throw Error('Pokémon database is still loading. Please retry.');catalog=data.pokemon;salaryCap=data.salaryCap;
+  // Preserve unsaved edits across temporary errors without embedding rosters in URLs.
+  try{const me=await accountRequest('/api/my-team');activeUsername=me.user?.username||'';let draft=null;try{if(activeUsername)draft=JSON.parse(sessionStorage.getItem('gridiron_draft_lineup_'+activeUsername)||'null')}catch{}if(me.team){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();lineup={};for(const pos of POS){const id=Number(me.team.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}}$('teamName').value=me.team.name;message(seen.size===22?(spent()>salaryCap?'Your saved team is over the salary cap. Replace expensive Pokémon to save.':'Editing '+me.team.name+' — change any position, then save your changes.'):'Your saved team has missing or duplicate Pokémon. Fill the empty positions and save.')}else message('Build your first Dream Team: choose 22 Pokémon, then save.');if(draft?.lineup&&typeof draft.lineup==='object'){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();for(const pos of POS){const id=Number(draft.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}else delete lineup[pos]}if(draft.name)$('teamName').value=draft.name;message('Restored your unsaved edits. Review the lineup and press Save My Team.')}}catch(e){if(/Log in/i.test(e.message)){location.replace('/account.html?next=/builder.html');return}message(e.message)}
+  render();score();
+ }catch(e){message('Unable to load: '+e.message)}
+}
+$('pokemonSearch').oninput=renderChoices;
+$('priceSort').onchange=renderChoices;
+$('removePlayer').onclick=removeSelected;
+
+async function accountRequest(url,method,data){const r=await fetch(url,{method:method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
+$('saveDreamTeam').onclick=async()=>{
+ if(saving)return;
+ try{
+  const valid=new Set(catalog.map(p=>p.id));if(!valid.size)throw Error('Pokémon are still loading. Please wait.');
+  const missing=POS.filter(p=>!valid.has(lineup[p]));if(missing.length)throw Error('Select Pokémon for '+missing.length+' missing position(s): '+missing.join(', '));
+  if(new Set(POS.map(p=>lineup[p])).size!==22)throw Error('Every position must have a different Pokémon.');
+  if(spent()>salaryCap)throw Error('Your lineup is $'+(spent()-salaryCap)+' over the $'+salaryCap+' salary cap. Replace a player and try again.');
+  saving=true;budget();$('saveDreamTeam').textContent='Saving…';message('Saving your Dream Team…');
+  const teamName=$('teamName').value.trim()||'My Dream Team';
+  await accountRequest('/api/my-team','POST',{name:teamName,lineup});
+  try{sessionStorage.removeItem('gridiron_draft_lineup_'+activeUsername)}catch{}
+  message('✓ Team saved successfully! Opening your roster…');location.assign('/my-team.html');
+ }catch(e){message('Could not save: '+e.message);if(/Log in|unauthorized|session/i.test(e.message)){message('Your session expired. Re-enter your username, then return to the builder to save your edits.');}}
+ finally{saving=false;$('saveDreamTeam').textContent='💾 Save My Team';budget()}
+};
+$('teamName').addEventListener('input',persist);
+$('loadDreamTeam').onclick=async()=>{try{const d=await accountRequest('/api/my-team');if(!d.team)throw Error('No saved team yet. Save one first.');lineup=d.team.lineup;$('teamName').value=d.team.name;persist();render();score();message('Loaded '+d.team.name+' from your account.')}catch(e){message(e.message)}};
+$('clearTeam').onclick=()=>{lineup={};selected='QB';persist();render();score();message('Lineup cleared')};
+$('shareTeam').onclick=async()=>{persist();try{await navigator.clipboard.writeText(location.href);message('Shareable lineup link copied!')}catch{message('Copy this URL to share: '+location.href)}};
+$('challengeFriends').onclick=async()=>{
+ const url=new URL('/builder.html',location.origin);
+ try{await navigator.clipboard.writeText(url.href);message('Challenge link copied! Friends can build their own team, enter their name, and submit to the same leaderboard.')}
+ catch{message('Send your friends this link: '+url.href)}
+};
+init();
+})();+p.salary;
+  const img=document.createElement('img');img.src=sprite(p.id);img.loading='lazy';img.alt='';
+  const detail=document.createElement('span');const tag=document.createElement('small');tag.textContent=label;
+  const title=document.createElement('strong');title.textContent=p.name;
+  const price=document.createElement('b');price.textContent='
+ $('pickerTitle').textContent='Pick your '+selected;
+ const search=$('pokemonSearch').value.trim().toLowerCase(),used=new Set(Object.values(lineup).map(Number));
+ const sort=$('priceSort').value;const list=catalog.filter(p=>p.name.includes(search)).sort((a,b)=>sort==='low'?a.salary-b.salary||a.id-b.id:sort==='high'?b.salary-a.salary||a.id-b.id:sort==='name'?a.name.localeCompare(b.name):a.id-b.id);
+ $('pickerGuide').textContent='Editing '+selected+(lineup[selected]?' · '+name(lineup[selected])+' currently selected':' · Empty position')+' · '+list.length+' Pokémon found';
+ const remove=$('removePlayer');remove.hidden=!lineup[selected];remove.disabled=!lineup[selected];remove.textContent=lineup[selected]?'✕ Remove '+name(lineup[selected])+' from '+selected:'Remove Player';
+ $('pokemonChoices').replaceChildren(...list.map(p=>{
+  const taken=used.has(p.id)&&lineup[selected]!==p.id;
+  const tooExpensive=spent()-salary(lineup[selected])+p.salary>salaryCap;
+  const btn=document.createElement('button');btn.type='button';btn.className='pokemon-choice'+(taken?' used':'')+(lineup[selected]===p.id?' chosen':'');btn.disabled=taken||tooExpensive;btn.title=taken?'Already assigned to another position':tooExpensive?'Over salary cap':p.name+' · $'+p.salary;
+  const img=document.createElement('img');img.src=sprite(p.id);img.loading='lazy';img.alt='';
+  const title=document.createElement('strong');title.textContent=p.name;
+  const cost=document.createElement('small');cost.textContent='$'+p.salary;btn.append(img,title,cost);btn.onclick=()=>{lineup[selected]=p.id;const next=POS.find(pos=>!lineup[pos]);if(next)selected=next;persist();render();score()};return btn
+ }))
+}
+function renderBreakdown(){
+ $('breakdown').replaceChildren(...POS.map(pos=>{
+  const row=document.createElement('div');row.className='breakdown-row';
+  const pick=document.createElement('button');pick.type='button';pick.className='roster-position-pick';
+  pick.textContent=pos+' · '+(lineup[pos]?name(lineup[pos])+' · $'+salary(lineup[pos]):'Open');
+  pick.onclick=()=>{selected=pos;render()};row.append(pick);
+  if(lineup[pos]){const remove=document.createElement('button');remove.type='button';remove.className='roster-remove';remove.textContent='✕';remove.title='Remove '+name(lineup[pos])+' from '+pos;remove.setAttribute('aria-label',remove.title);remove.onclick=()=>{selected=pos;removeSelected()};row.append(remove)}
+  return row
+ }))
+}
+function render(){renderField();renderChoices();renderBreakdown();const filled=POS.filter(p=>lineup[p]).length;$('statusText').textContent=filled+'/22 positions filled';const count=document.querySelector('.hero-number>strong');if(count)count.innerHTML=filled+'<span>/22</span>';budget()}
+function persist(){try{if(activeUsername)sessionStorage.setItem('gridiron_draft_lineup_'+activeUsername,JSON.stringify({lineup,name:$('teamName').value}));}catch{}}
+function score(){const filled=POS.filter(p=>lineup[p]).length;$('overall').textContent='—';$('offenseScore').textContent='—';$('defenseScore').textContent='—';$('statusText').textContent=filled+'/22 positions filled'}
+async function init(){
+ try{
+  const response=await fetch('/api/catalog');if(!response.ok)throw Error('Could not load Pokémon');
+  const data=await response.json();if(!data.ready)throw Error('Pokémon database is still loading. Please retry.');catalog=data.pokemon;salaryCap=data.salaryCap;
+  // Preserve unsaved edits across temporary errors without embedding rosters in URLs.
+  try{const me=await accountRequest('/api/my-team');activeUsername=me.user?.username||'';let draft=null;try{if(activeUsername)draft=JSON.parse(sessionStorage.getItem('gridiron_draft_lineup_'+activeUsername)||'null')}catch{}if(me.team){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();lineup={};for(const pos of POS){const id=Number(me.team.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}}$('teamName').value=me.team.name;message(seen.size===22?(spent()>salaryCap?'Your saved team is over the salary cap. Replace expensive Pokémon to save.':'Editing '+me.team.name+' — change any position, then save your changes.'):'Your saved team has missing or duplicate Pokémon. Fill the empty positions and save.')}else message('Build your first Dream Team: choose 22 Pokémon, then save.');if(draft?.lineup&&typeof draft.lineup==='object'){const valid=new Set(catalog.map(p=>p.id)),seen=new Set();for(const pos of POS){const id=Number(draft.lineup[pos]);if(valid.has(id)&&!seen.has(id)){lineup[pos]=id;seen.add(id)}else delete lineup[pos]}if(draft.name)$('teamName').value=draft.name;message('Restored your unsaved edits. Review the lineup and press Save My Team.')}}catch(e){if(/Log in/i.test(e.message)){location.replace('/account.html?next=/builder.html');return}message(e.message)}
+  render();score();
+ }catch(e){message('Unable to load: '+e.message)}
+}
+$('pokemonSearch').oninput=renderChoices;
+$('priceSort').onchange=renderChoices;
+$('removePlayer').onclick=removeSelected;
+
+async function accountRequest(url,method,data){const r=await fetch(url,{method:method||'GET',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:data?JSON.stringify(data):undefined});const d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d}
+$('saveDreamTeam').onclick=async()=>{
+ if(saving)return;
+ try{
+  const valid=new Set(catalog.map(p=>p.id));if(!valid.size)throw Error('Pokémon are still loading. Please wait.');
+  const missing=POS.filter(p=>!valid.has(lineup[p]));if(missing.length)throw Error('Select Pokémon for '+missing.length+' missing position(s): '+missing.join(', '));
+  if(new Set(POS.map(p=>lineup[p])).size!==22)throw Error('Every position must have a different Pokémon.');
+  if(spent()>salaryCap)throw Error('Your lineup is $'+(spent()-salaryCap)+' over the $'+salaryCap+' salary cap. Replace a player and try again.');
+  saving=true;budget();$('saveDreamTeam').textContent='Saving…';message('Saving your Dream Team…');
+  const teamName=$('teamName').value.trim()||'My Dream Team';
+  await accountRequest('/api/my-team','POST',{name:teamName,lineup});
+  try{sessionStorage.removeItem('gridiron_draft_lineup_'+activeUsername)}catch{}
+  message('✓ Team saved successfully! Opening your roster…');location.assign('/my-team.html');
+ }catch(e){message('Could not save: '+e.message);if(/Log in|unauthorized|session/i.test(e.message)){message('Your session expired. Re-enter your username, then return to the builder to save your edits.');}}
+ finally{saving=false;$('saveDreamTeam').textContent='💾 Save My Team';budget()}
+};
+$('teamName').addEventListener('input',persist);
+$('loadDreamTeam').onclick=async()=>{try{const d=await accountRequest('/api/my-team');if(!d.team)throw Error('No saved team yet. Save one first.');lineup=d.team.lineup;$('teamName').value=d.team.name;persist();render();score();message('Loaded '+d.team.name+' from your account.')}catch(e){message(e.message)}};
+$('clearTeam').onclick=()=>{lineup={};selected='QB';persist();render();score();message('Lineup cleared')};
+$('shareTeam').onclick=async()=>{persist();try{await navigator.clipboard.writeText(location.href);message('Shareable lineup link copied!')}catch{message('Copy this URL to share: '+location.href)}};
+$('challengeFriends').onclick=async()=>{
+ const url=new URL('/builder.html',location.origin);
+ try{await navigator.clipboard.writeText(url.href);message('Challenge link copied! Friends can build their own team, enter their name, and submit to the same leaderboard.')}
+ catch{message('Send your friends this link: '+url.href)}
+};
+init();
+})();+p.salary;
+  detail.append(tag,title,price);button.append(img,detail);
+  button.onclick=()=>choosePokemon(p);area.append(button);
+ }
+}
 function renderChoices(){
  $('pickerTitle').textContent='Pick your '+selected;
  const search=$('pokemonSearch').value.trim().toLowerCase(),used=new Set(Object.values(lineup).map(Number));
