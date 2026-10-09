@@ -1,0 +1,9 @@
+/* Shared four-destination mobile navigation */
+.g151-bottom-nav{display:none!important}
+@media(max-width:700px){
+ body{padding-bottom:max(74px,env(safe-area-inset-bottom) + 64px)}
+ .g151-bottom-nav{position:fixed!important;z-index:9999!important;left:0;right:0;bottom:0;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;padding:6px 6px max(8px,env(safe-area-inset-bottom));background:#0b2529;border-top:1px solid #527a60;box-shadow:0 -8px 30px #0008}
+ .g151-bottom-nav a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:51px;padding:5px 2px;border-radius:9px;color:#c1d7c6!important;text-decoration:none!important;font:800 10px system-ui,sans-serif!important}
+ .g151-bottom-nav a .g151-icon{font-size:21px;line-height:1.2}
+ .g151-bottom-nav a[aria-current=page]{background:#2b4b39;color:#d6fa79!important}
+}
