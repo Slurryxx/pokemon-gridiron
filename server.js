@@ -335,7 +335,7 @@ async function api(req,res,url){try{
  if(url.pathname==='/api/best-lineup'&&req.method==='GET')return json(res,403,{error:'Optimal lineup hints are disabled for competitive play.'});
  if(url.pathname==='/api/lineup-score'&&req.method==='POST')return json(res,403,{error:'Scouting grades are hidden during competitive play.'});
  if(url.pathname==='/api/health')return json(res,200,{ok:true,databaseReady:db.length===151,count:db.length,error});
- if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,salary:pokemonSalary(p.id)}))});
+ if(url.pathname==='/api/catalog')return json(res,200,{ready:db.length===151,error,salaryCap:SALARY_CAP,pokemon:db.filter(p=>allowedPokemon(p.id)).map(p=>({id:p.id,name:p.name,types:p.types,height_m:p.height_m,weight_kg:p.weight_kg,stats:p.stats,salary:pokemonSalary(p.id)}))});
  const b=req.method==='POST'?await body(req):{};
  if(url.pathname.startsWith('/api/auth/')||['/api/my-team','/api/dream-opponents','/api/dream-challenge','/api/dream-match','/api/league','/api/profile','/api/inbox','/api/challenge/send','/api/challenge/respond'].includes(url.pathname))return accountAPI(req,res,url,b);
  if(url.pathname==='/api/create'&&req.method==='POST'){const code=crypto.randomBytes(3).toString('hex').toUpperCase(),token=crypto.randomBytes(24).toString('hex');const r={code,players:[{token,ready:false},null],phase:'waiting',picks:[],result:null,created:Date.now()};rooms.set(code,r);return json(res,200,{...view(r,0),token})}
