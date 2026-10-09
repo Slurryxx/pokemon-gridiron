@@ -17,3 +17,19 @@
 #field-flash.active{animation:fieldflash .95s ease}
 @keyframes fieldflash{0%{opacity:0;transform:scale(.6)}25%{opacity:1;transform:scale(1.08)}75%{opacity:1}100%{opacity:0;transform:scale(1.1)}}
 @media(max-width:600px){.field{height:190px}.player img{width:45px;height:45px}}
+
+.roster{padding:12px 0 20px;border-bottom:1px solid #d9e5d5}
+.roster h3{font-size:17px;margin:4px 0 14px}
+.roster-section{font-size:10px;letter-spacing:2px;color:#59705d;margin:14px 0 8px}
+.roster-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.roster-slot{min-width:0;min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid #dce5d8;border-radius:9px;background:#e8eee5;padding:5px;text-align:center}
+.roster-slot.filled{background:#fff;border-color:#b4d7a4}
+.roster-team-1 .roster-slot.filled{border-color:#e4c38c;background:#fffaf1}
+.roster-position{font-size:10px;font-weight:900;color:#486d3d}
+.roster-team-1 .roster-position{color:#926323}
+.roster-sprite{width:58px;height:58px;object-fit:contain}
+.roster-slot.empty .roster-sprite{opacity:0}
+.roster-name{font-size:10px;font-weight:700;overflow-wrap:anywhere;line-height:1.2}
+.roster-slot.empty .roster-name{color:#9aa89a}
+@media(max-width:750px){.roster-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:400px){.roster-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
