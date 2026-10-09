@@ -35,14 +35,19 @@ function turn(game,body,db){
  const call=offense?play:aiCall;const base=PLAYS[call].base;
  const moveBonus=move.name==='Fly'&&call!=='pass'?1:move.name==='Flamethrower'&&call!=='pass'?2:move.bonus;
  const yards=Math.max(-7,Math.min(42,Math.round(base+(rng(game,'yards')-.5)*12+matchup+(offense?moveBonus:-moveBonus)+(game.stage*1.5)*(offense?-1:1))));
- const turnover=rng(game,'turnover')<(move.name==='Protect'?.005:.035);
+ const isPass=call==='pass'||call==='screen'||call==='trick';
+ const pressure=offense?(DEFENSE[aiCall].beats===play?0.23:0):(DEFENSE[play].beats===aiCall?0.27:0);
+ const failChance=Math.min(.75,(call==='pass'?.29:call==='trick'?.34:call==='screen'?.19:.09)+pressure+(game.stage*.035)-(offense?moveBonus*.012:0));
+ const failed=rng(game,'failure')<failChance;
+ const actualYards=failed?(isPass?0:Math.min(0,yards)):yards;
+ const turnover=rng(game,'turnover')<(move.name==='Protect'?.005:failed?.075:.025);
  const before={ball:game.ball,down:game.down,toGo:game.toGo,quarter:game.quarter,score:[...game.score]};
  let event='';if(turnover){game.turn=offense?'defense':'offense';game.ball=100-game.ball;game.down=1;game.toGo=10;event='TURNOVER! The defense takes possession.'}
- else {game.ball=Math.max(1,Math.min(100,game.ball+yards));if(game.ball>=100){game.score[offense?0:1]+=7;game.turn=offense?'defense':'offense';game.ball=25;game.down=1;game.toGo=10;event='TOUCHDOWN! Seven points on the board.'}
- else if(yards>=game.toGo){game.down=1;game.toGo=10;event='FIRST DOWN! Move the chains.'}
- else{game.down++;game.toGo=Math.max(1,game.toGo-yards);if(game.down>4){game.turn=offense?'defense':'offense';game.ball=100-game.ball;game.down=1;game.toGo=10;event='TURNOVER ON DOWNS!'}}}
+ else {game.ball=Math.max(1,Math.min(100,game.ball+actualYards));if(game.ball>=100){game.score[offense?0:1]+=7;game.turn=offense?'defense':'offense';game.ball=25;game.down=1;game.toGo=10;event='TOUCHDOWN! Seven points on the board.'}
+ else if(actualYards>=game.toGo){game.down=1;game.toGo=10;event='FIRST DOWN! Move the chains.'}
+ else{game.down++;game.toGo=Math.max(1,game.toGo-actualYards);if(game.down>4){game.turn=offense?'defense':'offense';game.ball=100-game.ball;game.down=1;game.toGo=10;event='TURNOVER ON DOWNS!'}}}
  for(const k of Object.keys(game.cooldowns))game.cooldowns[k]=Math.max(0,game.cooldowns[k]-1);game.cooldowns[position]=3;
- const entry={snap:game.snap+1,offense,play:PLAYS[call].name,aiCall:offense?DEFENSE[aiCall].name:PLAYS[aiCall].name,pokemon:selected.name,move:move.name,yards,event,before,after:{ball:game.ball,down:game.down,toGo:game.toGo,score:[...game.score]}};game.log.unshift(entry);game.log=game.log.slice(0,40);next(game);if(game.finished&&game.score[0]===game.score[1]){game.score[0]+=3;game.winner='player';entry.event+=' Overtime field goal!'}return entry
+ const entry={snap:game.snap+1,offense,play:PLAYS[call].name,aiCall:offense?DEFENSE[aiCall].name:PLAYS[aiCall].name,pokemon:selected.name,move:move.name,yards:actualYards,failed,event:failed&&!turnover?(isPass?'INCOMPLETE! The pass falls harmlessly.':'STUFFED! The defense wins the matchup.')+(event?' '+event:''):event,before,after:{ball:game.ball,down:game.down,toGo:game.toGo,score:[...game.score]}};game.log.unshift(entry);game.log=game.log.slice(0,40);next(game);if(game.finished&&game.score[0]===game.score[1]){game.score[0]+=3;game.winner='player';entry.event+=' Overtime field goal!'}return entry
 }
 async function showdownAPI({pool,user,method,body,db,validLineup}){
  await pool.query(`CREATE TABLE IF NOT EXISTS gridiron_showdown (user_id BIGINT PRIMARY KEY REFERENCES gridiron_users(id) ON DELETE CASCADE, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
