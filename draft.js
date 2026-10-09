@@ -73,7 +73,7 @@ const offenseSlots=['QB','RB','WR1','WR2','WR3','TE','LT','LG','C','RG','RT'];
 const defenseSlots=['DE1','DE2','DT1','DT2','LB1','LB2','LB3','CB1','CB2','FS','SS'];
 const lane={QB:50,RB:65,WR1:9,WR2:91,WR3:23,TE:78,LT:30,LG:40,C:50,RG:60,RT:70,DE1:27,DE2:73,DT1:42,DT2:58,LB1:35,LB2:50,LB3:65,CB1:12,CB2:88,FS:40,SS:60};
 let animationTimers=[],onField=new Map();
-const fieldClamp=x=>Math.max(7,Math.min(93,x));
+const fieldClamp=x=>Math.max(2,Math.min(98,x));
 function cancelFieldAnimation(){animationTimers.forEach(clearTimeout);animationTimers=[]}
 function later(fn,ms){animationTimers.push(setTimeout(fn,ms))}
 function starter(team,pos){return room?.picks?.find(p=>p.side===team&&p.position===pos)?.id}
@@ -94,9 +94,12 @@ function fieldUpdate(e){
  if(onField.size!==22)buildField();
  cancelFieldAnimation();
  const t=Number.isInteger(e.possession)?e.possession:0,opp=1-t,spot=Math.max(0,Math.min(100,Number(e.spot)||25));
- const direction=t===0?1:-1,x=fieldClamp(t===0?spot:100-spot);
+ const direction=t===0?1:-1,scored=e.kind==='touchdown';
+ // The goal line is inside the visual field: 10% left, 90% right.
+ // A touchdown must finish visibly BEYOND that line, inside the end zone.
+ const x=scored?(direction===1?96:4):fieldClamp(10+(t===0?spot:100-spot)*.8);
  const actors=e.actors||{},gain=Number(actors.gain)||0;
- const origin=fieldClamp(x-direction*Math.max(0,gain));
+ const origin=fieldClamp(x-direction*Math.max(0,gain)*.8);
  const playing=!!actors.carrier&&['play','bigplay','touchdown','incomplete','sack','turnover'].includes(e.kind);
  const base=playing?origin:x,pass=actors.playType==='pass';
  $('fieldpossession').textContent=(t===0?'FOREST CITY':'VOLT CITY')+' BALL';
@@ -136,7 +139,7 @@ function fieldUpdate(e){
  later(()=>{
   const carrierX=pass?fieldClamp(start+direction*13):fieldClamp(start-direction*3);
   setPlayer(t,carrierPos,finish,targetY,total*.65);
-  setPlayer(opp,defenderPos,fieldClamp(finish-direction*2),targetY+5,total*.68);
+  setPlayer(opp,defenderPos,fieldClamp(finish-direction*(scored?9:2)),targetY+5,total*.68);
   for(const pos of offenseSlots.filter(p=>p!==carrierPos&&p!=='QB'))setPlayer(t,pos,fieldClamp(start+direction*(pos.startsWith('WR')?17:8)),lane[pos],total*.7);
   for(const pos of defenseSlots.filter(p=>p!==defenderPos))setPlayer(opp,pos,fieldClamp(start+direction*(pos.startsWith('CB')?19:11)),lane[pos],total*.72);
   ball.style.transition='left '+Math.round(total*.4)+'ms ease-in-out,top '+Math.round(total*.4)+'ms ease-in-out';
