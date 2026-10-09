@@ -128,7 +128,7 @@ async function friendsAPI(req,res,url,b,user){
    WHERE f.requester_id=$1 OR f.recipient_id=$1 ORDER BY f.updated_at DESC`,[user.id]);
   let results=[];
   if(q.length>=2){const found=await pool.query(`SELECT u.username,t.name AS team_name FROM gridiron_users u LEFT JOIN gridiron_teams t ON t.user_id=u.id
-   WHERE u.id<>$1 AND (u.username ILIKE $2 OR t.name ILIKE $2) ORDER BY u.username LIMIT 20`,[user.id,'%'+q.replace(/[\\%_]/g,'\\async function accountAPI(req,res,url,b){')+'%']);results=found.rows}
+   WHERE u.id<>$1 AND (u.username ILIKE $2 OR t.name ILIKE $2) ORDER BY u.username LIMIT 20`,[user.id,'%'+q.replace(/[\\%_]/g,'\\$&')+'%']);results=found.rows}
   return json(res,200,{username:user.username,friends:friends.rows,results});
  }
  if(req.method!=='POST')return json(res,405,{error:'Method not allowed'});
