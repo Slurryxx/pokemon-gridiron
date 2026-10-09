@@ -242,3 +242,14 @@ body{background:radial-gradient(ellipse at 50% -20%,#245342 0%,#0b1b20 62%) fixe
  .picker-panel .pokemon-choices{grid-template-columns:repeat(2,minmax(0,1fr))}
  .picker-panel .recommendation-card img{width:39px;height:39px}
 }
+
+/* Formation toggle repair: opening it places the field directly after position chips,
+   before the long Pokémon market, instead of below all 151 choices. */
+@media(max-width:700px){
+ .builder-layout>.lineup-panel.mobile-open{display:block;order:-1;margin:0 0 12px;padding:12px;scroll-margin-top:100px}
+ .builder-layout>.picker-panel{order:0}
+ .builder-layout>.lineup-panel.mobile-open .clean-field{width:100%;min-height:490px;max-width:100%;margin-inline:auto}
+ .builder-layout>.lineup-panel.mobile-open .panel-heading{gap:8px}
+ .builder-layout>.lineup-panel.mobile-open .panel-hint{display:none}
+ .mobile-formation-toggle[aria-expanded="true"]{background:#d6fa79;color:#19362a;border-color:#d6fa79}
+}
