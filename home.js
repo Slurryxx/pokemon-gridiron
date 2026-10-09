@@ -1,1 +1,1 @@
-(()=>{'use strict';location.replace('/account.html');})();
+(()=>{'use strict';const status=document.getElementById('entryStatus');if(status)status.textContent='Choose a game mode. Friendly Snake Draft requires no saved team.';})();
