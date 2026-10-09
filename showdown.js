@@ -31,7 +31,7 @@ function turn(game,body,db){
  if(selected.cooldown>0)throw Error(selected.name+' needs '+selected.cooldown+' more snap(s) before using '+selected.move+'.');
  const move=moveFor(db[selected.id-1]);const offense=game.turn==='offense';
  const aiCall=offense?(rng(game,'counter')<.45?AI_TEAMS[game.stage].style:['blitz','zone','stack'][Math.floor(rng(game,'defense')*3)]):['run','pass','screen','trick'][Math.floor(rng(game,'offense')*4)];
- const matchup=offense?(PLAYS[play].beats===aiCall?4:DEFENSE[aiCall].beats===play?-5:0):(DEFENSE[play]?.beats===aiCall? -5:PLAYS[aiCall].beats===play?4:0);
+ const matchup=offense?(PLAYS[play].beats===aiCall?4:DEFENSE[aiCall].beats===play?-5:0):(DEFENSE[play].beats===aiCall?-5:PLAYS[aiCall].beats===play?4:0);
  const call=offense?play:aiCall;const base=PLAYS[call].base;
  const moveBonus=move.name==='Fly'&&call!=='pass'?1:move.name==='Flamethrower'&&call!=='pass'?2:move.bonus;
  const yards=Math.max(-7,Math.min(42,Math.round(base+(rng(game,'yards')-.5)*12+matchup+(offense?moveBonus:-moveBonus)+(game.stage*1.5)*(offense?-1:1))));
