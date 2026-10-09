@@ -2,6 +2,19 @@ const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),
 const scouting=require('./scouting.js');
 const {Pool}=require('pg');
 const pool=process.env.DATABASE_URL?new Pool({connectionString:process.env.DATABASE_URL,ssl:{rejectUnauthorized:false},max:4,connectionTimeoutMillis:10000}):null;
+function dbIssue(e){
+ const msg=String(e?.message||'');const code=String(e?.code||'');
+ if(!pool)return 'DATABASE_URL is missing from Render environment variables.';
+ if(/password authentication failed|28P01/i.test(msg+' '+code))return 'Supabase rejected the database password. Check the password in DATABASE_URL.';
+ if(/ENOTFOUND|getaddrinfo|EAI_AGAIN/i.test(msg+' '+code))return 'Database hostname cannot be resolved. Use the Supabase Session Pooler connection string.';
+ if(/ETIMEDOUT|timeout|ECONNREFUSED|ENETUNREACH|EHOSTUNREACH/i.test(msg+' '+code))return 'Cannot reach Supabase. Check the Session Pooler host and port 5432.';
+ if(/SSL|certificate|self.signed/i.test(msg+' '+code))return 'Database SSL negotiation failed. Check Supabase connection settings.';
+ if(/permission denied|42501/i.test(msg+' '+code))return 'Database user lacks permission to create or write the leaderboard table.';
+ if(/relation .* does not exist|42P01/i.test(msg+' '+code))return 'Leaderboard table is missing and could not be initialized.';
+ if(/too many connections|53300/i.test(msg+' '+code))return 'Supabase connection limit reached. Try again shortly.';
+ if(/project.*paused|project.*inactive/i.test(msg))return 'Supabase project may be paused. Resume it in the Supabase dashboard.';
+ return 'Supabase database error ('+(code||'connection failure')+'). Check Render logs for details.';
+}
 let leaderboardReady=null;
 async function leaderboardDB(){
  if(!pool)throw Error('DATABASE_URL is not configured on Render');
@@ -131,7 +144,7 @@ async function api(req,res,url){try{
    await leaderboardDB();
    const rows=await pool.query('SELECT id,name,score,offense,defense,lineup,EXTRACT(EPOCH FROM created_at)*1000 AS created FROM gridiron_leaderboard ORDER BY score DESC,created_at ASC,id ASC LIMIT 50');
    return json(res,200,{entries:rows.rows.map(x=>({...x,created:Number(x.created)})),persistent:true});
-  }catch(e){console.error('Leaderboard read failed:',e.message);return json(res,503,{error:'Leaderboard database unavailable. Check Render DATABASE_URL and Supabase connectivity.'})}
+  }catch(e){console.error('Leaderboard read failed:',e.message);return json(res,503,{error:dbIssue(e)})}
  }
  if(url.pathname==='/api/leaderboard'&&req.method==='POST'){
   const b=await body(req),name=String(b.name||'').trim().replace(/[<>]/g,'').slice(0,28);
@@ -142,7 +155,7 @@ async function api(req,res,url){try{
    const inserted=await pool.query('INSERT INTO gridiron_leaderboard(name,score,offense,defense,lineup) VALUES($1,$2,$3,$4,$5::jsonb) RETURNING id',[name,result.overall,result.offense,result.defense,JSON.stringify(POSITIONS.map(p=>Number(b.lineup[p])))]);
    const rank=await pool.query('SELECT COUNT(*)::int AS rank FROM gridiron_leaderboard WHERE score > $1 OR (score=$1 AND id <= $2)',[result.overall,inserted.rows[0].id]);
    return json(res,200,{rank:rank.rows[0].rank,score:result.overall});
-  }catch(e){console.error('Leaderboard save failed:',e.message);return json(res,503,{error:'Could not save team to Supabase. Check Render DATABASE_URL and database permissions.'})}
+  }catch(e){console.error('Leaderboard save failed:',e.message);return json(res,503,{error:dbIssue(e)})}
  }
  if(url.pathname==='/api/scouting'&&req.method==='GET')return json(res,200,{positions:POSITIONS,records:Array.from({length:151},(_,i)=>({id:i+1,...(scouting(i+1)||{grade:null,position:null})})),note:'150 graded Pokémon in uploaded CSV; Mew (#151) was not included.'});
  if(url.pathname==='/api/best-lineup'&&req.method==='GET'){const lineup=bestLineup();return json(res,200,{lineup,...gradeLineup(lineup)})}
