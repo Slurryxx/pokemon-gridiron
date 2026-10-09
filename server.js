@@ -21,7 +21,7 @@ async function body(req){let a=[],n=0;for await(const c of req){n+=c.length;if(n
 function room(code){const r=rooms.get(String(code||'').toUpperCase());if(!r)throw Error('Room not found');return r}
 function side(r,token){const i=r.players.findIndex(x=>x&&x.token===token);if(i<0)throw Error('Invalid room token');return i}
 function turn(n){return Math.floor(n/2)%2===0?n%2:1-n%2}
-function view(r,i){return {code:r.code,side:i,phase:r.phase,picks:r.picks,turn:r.picks.length<44?turn(r.picks.length):null,rosters:[0,1].map(t=>r.picks.filter(x=>x.side===t).map(x=>x.id)),ready:r.players.map(x=>!!x?.ready),connected:r.players.map(x=>!!x),result:r.result}}
+function view(r,i){const next=r.picks.length<44?turn(r.picks.length):null;const slot=next===null?null:POSITIONS[r.picks.filter(p=>p.side===next).length];return {code:r.code,side:i,phase:r.phase,picks:r.picks,turn:next,currentPosition:slot,positions:POSITIONS,rosters:[0,1].map(t=>r.picks.filter(x=>x.side===t).map(x=>x.id)),ready:r.players.map(x=>!!x?.ready),connected:r.players.map(x=>!!x),result:r.result}}
 function rate(id,pos){const p=db[id-1],s=p.stats,sp=s.speed,atk=s.attack,def=s.defense,hp=s.hp,sa=s['special-attack'],sd=s['special-defense'],weight=p.weight_kg;const power=atk*.65+hp*.15+Math.min(weight,200)*.13;
  if(pos==='QB')return sa*.55+sp*.25+hp*.2;
  if(pos==='RB'||pos.startsWith('WR'))return sp*.65+sa*.2+atk*.15;
@@ -64,7 +64,7 @@ async function api(req,res,url){try{
   if(db.length!==151)return json(res,503,{error:'Pokémon database still loading'});
   if(r.phase!=='draft'||turn(r.picks.length)!==i)return json(res,409,{error:'Not your turn'});
   if(!Number.isInteger(b.id)||b.id<1||b.id>151||r.picks.some(p=>p.id===b.id))return json(res,409,{error:'Pokémon unavailable'});
-  r.picks.push({side:i,id:b.id});if(r.picks.length===44)r.phase='lineups';return json(res,200,view(r,i))
+  const position=POSITIONS[r.picks.filter(p=>p.side===i).length];r.picks.push({side:i,id:b.id,position});if(r.picks.length===44)r.phase='lineups';return json(res,200,view(r,i))
  }
  if(url.pathname==='/api/ready'&&req.method==='POST'){
   if(r.phase!=='lineups')return json(res,409,{error:'Finish the draft first'});
